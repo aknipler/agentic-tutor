@@ -4,6 +4,11 @@ from datetime import datetime
 
 BASE_URL = "http://localhost:8501/"
 
+# Check if user is logged in
+if "logged_in" not in st.session_state or not st.session_state.logged_in:
+    st.warning("Please login from the Home page to access your progress.")
+    st.stop()
+
 def get_status_emoji(status):
     """Convert status to emoji"""
     status_map = {
@@ -12,6 +17,15 @@ def get_status_emoji(status):
         "not_started": "🔴"
     }
     return status_map.get(status, "🔴")
+
+def get_status_from_progress(progress):
+    """Convert numeric progress (0, 1, 2) to status string"""
+    progress_map = {
+        0: "not_started",
+        1: "in_progress",
+        2: "completed"
+    }
+    return progress_map.get(progress, "not_started")
 
 # Load module data from MongoDB
 @st.cache_data(ttl=10)
@@ -28,8 +42,9 @@ def load_modules_data():
 
 # Load user progress data from MongoDB
 @st.cache_data(ttl=5)
-def load_user_progress(user_id="user123"):
+def load_user_progress():
     """Load user progress from MongoDB"""
+    user_id = st.session_state.user_id
     try:
         data = get_user_progress(user_id)
         if st.session_state.get('debug_mode', False):
@@ -37,10 +52,13 @@ def load_user_progress(user_id="user123"):
         return data
     except Exception as e:
         st.error(f"Error loading user progress from MongoDB: {str(e)}")
-        return {"topics": [], "tutorial_questions": []}
+        return {"user_id": user_id, "modules": {}}
 
 def overview():
     st.title("Your Learning Progress")
+    
+    # Show user ID
+    st.sidebar.info(f"Logged in as: {st.session_state.user_id}")
     
     # Debug toggle in sidebar
     with st.sidebar:
@@ -153,10 +171,11 @@ def overview():
         completed_tutorials = sum(1 for q_id in tutorial_questions_dict.keys() if user_questions.get(q_id, {}).get("status") == "completed")
         completed_items = completed_topics + completed_tutorials
         
-        completion_percentage = (completed_items / total_items) * 100 if total_items > 0 else 0
+        module_progress = int((completed_items / total_items) * 2) if total_items > 0 else 0
+        module_status = get_status_from_progress(module_progress)
         
         # Create an expander for each module
-        with st.expander(f"Module {module_index}: {module_title} - {completion_percentage:.0f}% Complete", expanded=module_index == 1):
+        with st.expander(f"Module {module_index}: {module_title} {get_status_emoji(module_status)}", expanded=module_index == 1):
             # Create columns for the progress display
             col1, col2 = st.columns([3, 1])
             
@@ -172,7 +191,7 @@ def overview():
             
             # Display progress bar in the second column
             with col2:
-                st.progress(completion_percentage / 100)
+                st.progress(module_progress / 2)
             
             # Display topics section
             st.markdown("#### Module Topics")
@@ -180,20 +199,21 @@ def overview():
                 for i, topic in enumerate(topics):
                     topic_id = f"{module_id}.{i + 1}"
                     topic_data = user_topics.get(topic_id, {})
-                    status = get_status_emoji(topic_data.get("status", "not_started"))
                     progress = topic_data.get("progress", 0)
+                    status = get_status_from_progress(progress)
+                    status_emoji = get_status_emoji(status)
                     
                     status_color = {
                         '✅': 'green',
                         '🟠': 'orange',
                         '🔴': 'red'
-                    }.get(status, 'gray')
+                    }.get(status_emoji, 'gray')
                     
                     # Create columns for status and topic name
-                    t_col1, t_col2, t_col3 = st.columns([1, 3, 1])
+                    t_col1, t_col2 = st.columns([1, 5])
                     
                     with t_col1:
-                        st.markdown(f"<span style='color:{status_color}'>{status}</span>", unsafe_allow_html=True)
+                        st.markdown(f"<span style='color:{status_color}'>{status_emoji}</span>", unsafe_allow_html=True)
                     
                     with t_col2:
                         # Handle both string and dictionary topic formats
@@ -202,9 +222,6 @@ def overview():
                         
                         # Display topic name with hover description
                         st.markdown(f"{topic_name}", help=topic_description)
-                    
-                    with t_col3:
-                        st.markdown(f"{progress}%")
             else:
                 st.info("No topics found for this module.")
             
@@ -220,21 +237,22 @@ def overview():
                     
                     # Get progress data
                     q_data = user_questions.get(question_id, {})
-                    status = get_status_emoji(q_data.get("status", "not_started"))
-                    attempts = q_data.get("attempts", 0)
                     progress = q_data.get("progress", 0)
+                    status = get_status_from_progress(progress)
+                    status_emoji = get_status_emoji(status)
+                    attempts = q_data.get("attempts", 0)
                     
                     status_color = {
                         '✅': 'green',
-                        '🟨': 'orange',
-                        '⭕': 'red'
-                    }.get(status, 'gray')
+                        '🟠': 'orange',
+                        '🔴': 'red'
+                    }.get(status_emoji, 'gray')
                     
                     # Create columns for status and link
-                    q_col1, q_col2, q_col3, q_col4 = st.columns([1, 3, 1, 1])
+                    q_col1, q_col2, q_col3 = st.columns([1, 5, 1])
                     
                     with q_col1:
-                        st.markdown(f"<span style='color:{status_color}'>{status}</span>", unsafe_allow_html=True)
+                        st.markdown(f"<span style='color:{status_color}'>{status_emoji}</span>", unsafe_allow_html=True)
                     
                     with q_col2:
                         # Create link to assessor with query parameters for the question
@@ -246,9 +264,6 @@ def overview():
                         )
                     
                     with q_col3:
-                        st.markdown(f"{progress}%")
-                    
-                    with q_col4:
                         if attempts > 0:
                             st.markdown(f"({attempts})")
             else:

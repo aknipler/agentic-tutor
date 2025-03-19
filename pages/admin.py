@@ -3,6 +3,11 @@ import os
 from openai import OpenAI
 from datetime import datetime
 
+# Check if user is logged in
+if "logged_in" not in st.session_state or not st.session_state.logged_in:
+    st.warning("Please login from the Home page to access the admin page.")
+    st.stop()
+
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 

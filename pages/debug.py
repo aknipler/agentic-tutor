@@ -2,6 +2,11 @@ import streamlit as st
 import json
 import os
 
+# Check if user is logged in
+if "logged_in" not in st.session_state or not st.session_state.logged_in:
+    st.warning("Please login from the Home page to access this page.")
+    st.stop()
+
 st.set_page_config(page_title="FunCE - Debug", layout="wide")
 
 def load_file(file_path):

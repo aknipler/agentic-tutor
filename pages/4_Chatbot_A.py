@@ -3,6 +3,10 @@ from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
 from llama_index.llms.openai import OpenAI
 from llama_index.core import Settings
 
+# Check if user is logged in
+if "logged_in" not in st.session_state or not st.session_state.logged_in:
+    st.warning("Please login from the Home page to access the chatbot.")
+    st.stop()
 
 st.title("FunCE Chatbot A")
 with st.expander("ℹ️ Disclaimer"):

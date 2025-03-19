@@ -129,7 +129,7 @@ def get_user_progress(user_id="user123"):
     Retrieve user progress data from MongoDB using the new user_module_progress collection.
     
     Args:
-        user_id (str): The ID of the user.
+        user_id (str): The ID of the user (login code).
         
     Returns:
         dict: A dictionary containing the user's progress data.
@@ -150,53 +150,52 @@ def get_user_progress(user_id="user123"):
             # Create default progress structure for new user
             default_data = {
                 "user_id": user_id,
-                "last_updated": datetime.now(),
-                "topics": [],
-                "tutorial_questions": []
+                "created_at": datetime.now(),
+                "updated_at": datetime.now(),
+                "modules": {}
             }
             
-            # Initialize topics and tutorial questions for each module
-            for i, module in enumerate(modules_list, 1):
-                module_id = str(i)
-                topics = module.get("topics", [])
-                tutorial_questions = module.get("tutorial_questions", [])
+            # Initialize modules with default values
+            for module in modules_list:
+                module_id = str(modules_list.index(module) + 1)
+                default_data["modules"][module_id] = {
+                    "progress": 0,
+                    "status": "not_started",
+                    "topics": {},
+                    "questions": {}
+                }
                 
-                # Add topics with default progress
-                for topic in topics:
-                    topic_id = f"{module_id}.{len(default_data['topics']) + 1}"
-                    default_data["topics"].append({
-                        "topic_id": topic_id,
-                        "name": topic.get("name", str(topic)),
+                # Initialize topics
+                for topic in module.get("topics", []):
+                    topic_name = topic.get("name")
+                    default_data["modules"][module_id]["topics"][topic_name] = {
                         "progress": 0,
                         "status": "not_started"
-                    })
+                    }
                 
-                # Add tutorial questions with default progress
-                for question in tutorial_questions:
-                    question_id = f"{module_id}.{len(default_data['tutorial_questions']) + 1}"
-                    default_data["tutorial_questions"].append({
-                        "question_id": question_id,
-                        "progress": 0,
+                # Initialize questions
+                for question_id, question_info in module.get("tutorial_questions", {}).items():
+                    default_data["modules"][module_id]["questions"][question_id] = {
                         "status": "not_started",
                         "attempts": 0,
                         "last_attempt": None
-                    })
+                    }
             
+            # Insert default progress data
             user_progress_collection.insert_one(default_data)
-            st.info(f"Created default progress data for user {user_id}")
-            user_data = default_data
+            
+            # Return the default data
+            return default_data
         
-        # Only show debug output if debug_mode is True in session state
         if st.session_state.get('debug_mode', False):
-            st.write("Debug: Retrieved user progress:", user_data)  # Debug log
+            st.write("Debug: Retrieved user progress:", user_data)
         return user_data
     except Exception as e:
-        # Only show debug output if debug_mode is True in session state
         if st.session_state.get('debug_mode', False):
-            st.error(f"Debug: Error in get_user_progress: {str(e)}")  # Debug log
+            st.error(f"Debug: Error in get_user_progress: {str(e)}")
         else:
-            st.error(f"Error retrieving user progress")
-        return {"topics": [], "tutorial_questions": []}
+            st.error("Error retrieving user progress")
+        return {"user_id": user_id, "modules": {}}
 
 def update_user_progress(user_id, module_id, topic_id=None, question_id=None, progress=None, status=None):
     """
@@ -207,7 +206,7 @@ def update_user_progress(user_id, module_id, topic_id=None, question_id=None, pr
         module_id (str): The ID of the module.
         topic_id (str, optional): The ID of the topic to update.
         question_id (str, optional): The ID of the question to update.
-        progress (int, optional): The new progress value (0-100).
+        progress (int, optional): The new progress value (0=not started, 1=in progress, 2=completed).
         status (str, optional): The new status to set.
     """
     try:
@@ -222,12 +221,18 @@ def update_user_progress(user_id, module_id, topic_id=None, question_id=None, pr
         if topic_id is not None:
             if progress is not None:
                 update_data["topics.$[topic].progress"] = progress
+                # Set status based on progress if not explicitly provided
+                if status is None:
+                    status = ["not_started", "in_progress", "completed"][progress]
             if status is not None:
                 update_data["topics.$[topic].status"] = status
         
         if question_id is not None:
             if progress is not None:
                 update_data["tutorial_questions.$[question].progress"] = progress
+                # Set status based on progress if not explicitly provided
+                if status is None:
+                    status = ["not_started", "in_progress", "completed"][progress]
             if status is not None:
                 update_data["tutorial_questions.$[question].status"] = status
             update_data["tutorial_questions.$[question].last_attempt"] = datetime.now()
@@ -433,3 +438,288 @@ def get_all_modules():
         }
     
     return result
+
+def update_competency(user_id, topic_name, level):
+    """
+    Update a user's competency level (0, 1, or 2) for a specific topic.
+    If the topic doesn't exist for the user, it will be created.
+    
+    Args:
+        user_id (str): The user's ID
+        topic_name (str): Name of the topic
+        level (int): Competency level (0=not started, 1=in progress, 2=completed)
+    """
+    try:
+        if st.session_state.get('debug_mode', False):
+            st.write(f"Debug: Starting competency update for user {user_id}, topic {topic_name}, level {level}")
+        
+        client = get_mongo_client()
+        db = client["funce_db"]
+        user_progress_collection = db["user_module_progress"]
+        
+        # Map level directly to status
+        status = ["not_started", "in_progress", "completed"][level]
+        
+        if st.session_state.get('debug_mode', False):
+            st.write(f"Debug: Setting level {level} and status '{status}'")
+        
+        # Try to update existing topic
+        result = user_progress_collection.update_one(
+            {
+                "user_id": user_id,
+                "topics.name": topic_name
+            },
+            {
+                "$set": {
+                    "topics.$.progress": level,
+                    "topics.$.status": status,
+                    "topics.$.last_updated": datetime.now()
+                }
+            }
+        )
+        
+        # If no topic was updated (modified_count == 0), the topic doesn't exist, so create it
+        if result.modified_count == 0:
+            if st.session_state.get('debug_mode', False):
+                st.write(f"Debug: Topic {topic_name} not found for user {user_id}. Creating new topic.")
+            
+            # Check if user exists
+            user_exists = user_progress_collection.find_one({"user_id": user_id})
+            
+            if user_exists:
+                # User exists, add new topic
+                new_topic = {
+                    "topic_id": f"auto.{len(user_exists.get('topics', [])) + 1}",
+                    "name": topic_name,
+                    "progress": level,
+                    "status": status,
+                    "last_updated": datetime.now()
+                }
+                
+                result = user_progress_collection.update_one(
+                    {"user_id": user_id},
+                    {"$push": {"topics": new_topic}}
+                )
+                
+                if st.session_state.get('debug_mode', False):
+                    if result.modified_count > 0:
+                        st.write(f"Debug: Successfully added new topic {topic_name} with level {level}, status {status}")
+                    else:
+                        st.write(f"Debug: Failed to add new topic {topic_name}")
+            else:
+                # User doesn't exist, create user with this topic
+                if st.session_state.get('debug_mode', False):
+                    st.write(f"Debug: User {user_id} not found. Creating new user with topic {topic_name}")
+                
+                new_user_data = {
+                    "user_id": user_id,
+                    "last_updated": datetime.now(),
+                    "topics": [{
+                        "topic_id": "auto.1",
+                        "name": topic_name,
+                        "progress": level,
+                        "status": status,
+                        "last_updated": datetime.now()
+                    }],
+                    "tutorial_questions": []
+                }
+                
+                user_progress_collection.insert_one(new_user_data)
+                
+                if st.session_state.get('debug_mode', False):
+                    st.write(f"Debug: Created new user {user_id} with topic {topic_name}")
+                
+                return True
+        else:
+            if st.session_state.get('debug_mode', False):
+                st.write(f"Debug: Successfully updated competency for topic {topic_name}")
+                st.write(f"Debug: New values - Level: {level}, Status: {status}")
+        
+        return True
+    except Exception as e:
+        if st.session_state.get('debug_mode', False):
+            st.error(f"Debug: Error updating competency: {str(e)}")
+            st.exception(e)  # This will show the full traceback
+        return False
+
+def get_topic_competency(user_id, topic_name):
+    """
+    Get a user's competency level for a specific topic.
+    
+    Args:
+        user_id (str): The user's ID
+        topic_name (str): Name of the topic
+        
+    Returns:
+        dict: A dictionary containing the topic's competency information
+    """
+    try:
+        if st.session_state.get('debug_mode', False):
+            st.write(f"Debug: Fetching competency for user {user_id}, topic {topic_name}")
+        
+        client = get_mongo_client()
+        db = client["funce_db"]
+        user_progress_collection = db["user_module_progress"]
+        
+        # Find the user's progress document and get the specific topic
+        user_data = user_progress_collection.find_one(
+            {
+                "user_id": user_id,
+                "topics.name": topic_name
+            },
+            {
+                "topics.$": 1
+            }
+        )
+        
+        if st.session_state.get('debug_mode', False):
+            st.write("Debug: Raw user data from MongoDB:", user_data)
+        
+        if user_data and user_data.get("topics"):
+            topic_data = user_data["topics"][0]
+            # Progress is now directly the level (0, 1, 2)
+            progress = topic_data.get("progress", 0)
+            
+            result = {
+                "topic_name": topic_name,
+                "level": progress,
+                "progress": progress,
+                "status": topic_data.get("status", "not_started"),
+                "last_updated": topic_data.get("last_updated")
+            }
+            
+            if st.session_state.get('debug_mode', False):
+                st.write("Debug: Found topic data:", result)
+            
+            return result
+        
+        # Return default values if topic not found
+        default_result = {
+            "topic_name": topic_name,
+            "level": 0,
+            "progress": 0,
+            "status": "not_started",
+            "last_updated": None
+        }
+        
+        if st.session_state.get('debug_mode', False):
+            st.write(f"Debug: Topic {topic_name} not found. Returning default values:", default_result)
+            # Get current user data to help diagnose issues
+            current_data = user_progress_collection.find_one({"user_id": user_id})
+            if current_data:
+                st.write("Debug: Available topics for user:", [t.get("name") for t in current_data.get("topics", [])])
+            else:
+                st.write("Debug: No user data found")
+        
+        return default_result
+        
+    except Exception as e:
+        if st.session_state.get('debug_mode', False):
+            st.error(f"Debug: Error getting topic competency: {str(e)}")
+            st.exception(e)  # This will show the full traceback
+        return None
+
+def verify_user_login(login_code):
+    """
+    Verify if a user login code exists in the database.
+    
+    Args:
+        login_code (str): The login code to verify.
+        
+    Returns:
+        bool: True if the login code is valid, False otherwise.
+    """
+    try:
+        client = get_mongo_client()
+        db = client["funce_db"]
+        users_collection = db["users"]
+        
+        # Check if user exists
+        user = users_collection.find_one({"login_code": login_code})
+        
+        if user:
+            return True
+        else:
+            return False
+            
+    except Exception as e:
+        if st.session_state.get('debug_mode', False):
+            st.error(f"Debug: Error in verify_user_login: {str(e)}")
+        return False
+
+def create_user(login_code, name=""):
+    """
+    Create a new user with the given login code.
+    
+    Args:
+        login_code (str): The login code for the new user.
+        name (str): Optional name for the user.
+        
+    Returns:
+        bool: True if user creation was successful, False otherwise.
+    """
+    try:
+        client = get_mongo_client()
+        db = client["funce_db"]
+        users_collection = db["users"]
+        
+        # Check if user already exists
+        existing_user = users_collection.find_one({"login_code": login_code})
+        if existing_user:
+            if st.session_state.get('debug_mode', False):
+                st.error(f"Debug: User with login code {login_code} already exists")
+            return False
+        
+        # Create new user
+        new_user = {
+            "login_code": login_code,
+            "name": name,
+            "created_at": datetime.now()
+        }
+        
+        result = users_collection.insert_one(new_user)
+        
+        if result.inserted_id:
+            return True
+        else:
+            return False
+            
+    except Exception as e:
+        if st.session_state.get('debug_mode', False):
+            st.error(f"Debug: Error in create_user: {str(e)}")
+        return False
+
+def get_or_create_default_users():
+    """
+    Ensures that default users exist in the database.
+    
+    Returns:
+        list: A list of default login codes.
+    """
+    try:
+        client = get_mongo_client()
+        db = client["funce_db"]
+        users_collection = db["users"]
+        
+        # Default login codes
+        default_login_codes = ["FUNCE001", "FUNCE002", "FUNCE003"]
+        
+        # Check if users collection is empty
+        if users_collection.count_documents({}) == 0:
+            # Create default users
+            for code in default_login_codes:
+                users_collection.insert_one({
+                    "login_code": code,
+                    "name": f"Default User {code[-3:]}",
+                    "created_at": datetime.now()
+                })
+            
+            if st.session_state.get('debug_mode', False):
+                st.info("Debug: Created default users")
+        
+        return default_login_codes
+    
+    except Exception as e:
+        if st.session_state.get('debug_mode', False):
+            st.error(f"Debug: Error in get_or_create_default_users: {str(e)}")
+        return []

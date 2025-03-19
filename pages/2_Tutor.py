@@ -3,7 +3,12 @@ import time
 import os
 import openai
 import json
-from mongodb.connector import get_user_progress as get_mongo_user_progress
+from mongodb.connector import get_user_progress as get_mongo_user_progress, update_competency, get_topic_competency
+
+# Check if user is logged in
+if "logged_in" not in st.session_state or not st.session_state.logged_in:
+    st.warning("Please login from the Home page to access the tutor.")
+    st.stop()
 
 # Load the tutor prompt
 @st.cache_data
@@ -152,8 +157,8 @@ def get_user_progress(module):
     Get the user's progress for topics in the current module.
     """
     try:
-        # Get user progress from MongoDB
-        user_id = st.session_state.get("user_id", "user123")  # Default to user123 if not set
+        # Use the authenticated user ID instead of default 'user123'
+        user_id = st.session_state.user_id
         progress_data = get_mongo_user_progress(user_id)
         
         if not progress_data:
@@ -206,8 +211,8 @@ def get_user_progress(module):
                 topic_name = str(topic)
             
             progress = progress_map.get(topic_name, 0)
-            status = "✅" if progress >= 100 else "🟠" if progress > 0 else "🔴"
-            progress_summary.append(f"{status} {topic_name}: {progress}%")
+            status = "✅" if progress == 2 else "🟠" if progress == 1 else "🔴"
+            progress_summary.append(f"{status} {topic_name}")
         
         return "\n\n".join(progress_summary)
     except Exception as e:
@@ -216,131 +221,206 @@ def get_user_progress(module):
         return None
 
 def get_bot_response(user_input, module):
-    """
-    Get a response from the tutor bot using OpenAI for the specified module.
-    """
+    """Get a response from the tutor bot and track competencies using function calling"""
     try:
-        # Get OpenAI client
         client = setup_openai_client()
-        
-        # Get module content
         module_context, module_name = get_module_content(module)
         
         # Get system prompt
         system_prompt = load_tutor_prompt()
         
-        # Combine system prompt and context
-        instructions = f"{system_prompt}"
+        # Define the competency management tools
+        tools = [
+            {
+                "type": "function",
+                "name": "update_topic_competency",
+                "description": "Update a student's competency level for a specific topic",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "topic_name": {
+                            "type": "string",
+                            "description": "The name of the topic to update"
+                        },
+                        "level": {
+                            "type": "integer",
+                            "description": "Competency level (0=not started, 1=in progress, 2=completed)",
+                            "enum": [0, 1, 2]
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "Brief explanation for the competency update"
+                        }
+                    },
+                    "required": ["topic_name", "level", "reason"]
+                }
+            },
+            {
+                "type": "function",
+                "name": "get_topic_competency",
+                "description": "Get a student's current competency level for a specific topic",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "topic_name": {
+                            "type": "string",
+                            "description": "The name of the topic to check"
+                        }
+                    },
+                    "required": ["topic_name"]
+                }
+            }
+        ]
         
         # Get previous response ID from session state for this module
         chat_history_key = f"messages_module_{module}"
         previous_response_id = None
         
-        # Debug information
-        if st.session_state.get("debug_mode", False):
-            st.write("Debug Info:")
-            st.write(f"Chat History Key: {chat_history_key}")
-            st.write(f"Session State Keys: {list(st.session_state.keys())}")
-            if chat_history_key in st.session_state:
-                st.write(f"Chat History Length: {len(st.session_state[chat_history_key])}")
-                st.write(f"Chat History Content: {st.session_state[chat_history_key]}")
-            else:
-                st.write("Chat History Key not found in session state")
-        
         # Get the last response ID from the chat history
         if chat_history_key in st.session_state:
-            # Find the last assistant message with a response_id
             for message in reversed(st.session_state[chat_history_key]):
                 if message.get("role") == "assistant" and message.get("response_id"):
                     previous_response_id = message.get("response_id")
-                    if st.session_state.get("debug_mode", False):
-                        st.write(f"Found Previous Response ID: {previous_response_id}")
                     break
-        
-        # Check if this is the first user message
-        is_first_message = chat_history_key in st.session_state and len(st.session_state[chat_history_key]) <= 3  # Includes progress, greeting and first user message
         
         # Prepare input content
         input_content = []
         
+        # Check if this is the first user message
+        is_first_message = chat_history_key in st.session_state and len(st.session_state[chat_history_key]) <= 3
+        
         # If this is the first message and there's a file, include it first
         if is_first_message:
-            # Check if there's a file associated with this module
             file_id = st.session_state.get(f"module_{module}_file_id")
             if file_id:
-                # Clean the file ID
                 cleaned_file_id = clean_file_id(file_id)
-                if not cleaned_file_id:
-                    st.error("Invalid file ID format")
-                    return "I'm sorry, there was an issue with the file ID. Please try again."
-                    
-                # Add file content as a system message
-                input_content.append({
-                    "role": "system",
-                    "content": [
-                        {
-                            "type": "input_file",
-                            "file_id": cleaned_file_id,
-                        }
-                    ]
-                })
-            
-            # Add all previous assistant messages (progress and welcome)
-            for message in st.session_state[chat_history_key]:
-                if message["role"] == "assistant" and "response_id" not in message:  # Only include initial messages
+                if cleaned_file_id:
                     input_content.append({
-                        "role": message["role"],
-                        "content": message["content"]
+                        "role": "system",
+                        "content": [{"type": "input_file", "file_id": cleaned_file_id}]
                     })
-                    if st.session_state.get("debug_mode", False):
-                        st.write(f"Adding initial message: {message['content'][:50]}...")
         
-        # Add the current user message without file
+        # Add the current user message
         input_content.append({
             "role": "user",
             "content": user_input
         })
         
-        if st.session_state.get("debug_mode", False):
-            st.write("Input Content:", input_content)
-            st.write("Previous Response ID:", previous_response_id)
-        
-        # Call the OpenAI API with responses.create
+        # Call the OpenAI API with function definitions
         response = client.responses.create(
             model="gpt-4o",
-            instructions=instructions,
+            instructions=system_prompt,
             input=input_content,
+            tools=tools,
             previous_response_id=previous_response_id
         )
         
-        if st.session_state.get("debug_mode", False):
-            st.write("Response:", response)
-            st.write("Response ID:", response.id)
+        # Handle function calls if any
+        if hasattr(response, 'output') and response.output and any(item.type == "function_call" for item in response.output):
+            # Process function calls
+            new_messages = list(input_content)  # Create a copy of input_content
+            
+            # For each function call in the output
+            for tool_call in [item for item in response.output if item.type == "function_call"]:
+                # Add the function call to messages
+                new_messages.append(tool_call)
+                
+                # Process the function call
+                func_name = tool_call.name
+                func_args = json.loads(tool_call.arguments)
+                
+                # Handle different function types
+                result = None
+                if func_name == "update_topic_competency":
+                    topic_name = func_args.get("topic_name")
+                    level = func_args.get("level")
+                    reason = func_args.get("reason")
+                    
+                    if topic_name is not None and level is not None:
+                        # Update the competency in MongoDB
+                        update_competency(
+                            st.session_state.user_id,
+                            topic_name,
+                            level
+                        )
+                        
+                        result = f"Successfully updated competency for {topic_name} to level {level}"
+                        
+                        if st.session_state.get("debug_mode", False):
+                            st.write(f"Debug: Updated competency for topic {topic_name} to level {level}")
+                            st.write(f"Debug: Reason: {reason}")
+                
+                elif func_name == "get_topic_competency":
+                    topic_name = func_args.get("topic_name")
+                    
+                    if topic_name is not None:
+                        # Get the competency from MongoDB
+                        competency_data = get_topic_competency(
+                            st.session_state.user_id,
+                            topic_name
+                        )
+                        
+                        if competency_data:
+                            progress = competency_data.get("progress", 0)
+                            # Progress is now directly the level (0, 1, 2)
+                            result = json.dumps({
+                                "topic_name": topic_name,
+                                "progress": progress,
+                                "level": progress
+                            })
+                        else:
+                            result = f"No competency data found for {topic_name}"
+                        
+                        if st.session_state.get("debug_mode", False):
+                            st.write(f"Debug: Retrieved competency for topic {topic_name}:", competency_data)
+                
+                # Add the function result to messages
+                if result is not None:
+                    new_messages.append({
+                        "type": "function_call_output",
+                        "call_id": tool_call.call_id,
+                        "output": result
+                    })
+            
+            try:
+                # Generate a new response with the function results
+                new_response = client.responses.create(
+                    model="gpt-4o",
+                    instructions=system_prompt,
+                    input=new_messages
+                )
+                
+                # Update the response
+                response_text = new_response.output_text
+                response = new_response
+                
+            except Exception as tool_error:
+                # Log the error but continue with the original response
+                st.error(f"Error handling function calls: {str(tool_error)}")
+                if st.session_state.get("debug_mode", False):
+                    st.exception(tool_error)
+                    st.write("Debug - Messages:", new_messages)
+        else:
+            response_text = response.output_text
         
-        # Store the response ID in session state
+        # Store the response in chat history
         if chat_history_key not in st.session_state:
             st.session_state[chat_history_key] = []
         
-        # Add the response to chat history with its ID
         new_message = {
             "role": "assistant",
-            "content": response.output_text,
+            "content": response_text,
             "response_id": response.id
         }
         st.session_state[chat_history_key].append(new_message)
         
-        if st.session_state.get("debug_mode", False):
-            st.write("Updated Chat History:", st.session_state[chat_history_key])
-            st.write("Last Message Response ID:", st.session_state[chat_history_key][-1].get("response_id"))
-        
-        # Return the response text
-        return response.output_text
+        return response_text
         
     except Exception as e:
         st.error(f"Error generating response: {str(e)}")
         if st.session_state.get("debug_mode", False):
-            st.exception(e)  # This will show the full traceback
-        return "I'm sorry, I encountered an error. Please try again or contact support if the issue persists."
+            st.exception(e)
+        return "I'm sorry, I encountered an error. Please try again."
 
 # Main app function
 def main():
@@ -353,12 +433,15 @@ def main():
         AI-Chris will help you learn chemical engineering concepts through guided questioning rather than giving direct answers.
         This approach helps develop critical thinking and deeper understanding of the subject.
         
+        **Competency Levels:**
+        - 🔴 Not started
+        - 🟠 In Progress
+        - ✅ Completed
+        
         **How to Use:**
         1. Ask questions about the module content
         2. Attempt to answer AI-Chris's questions
-        3. AI-Chris will guide you toward the correct understanding
-        
-        This tutor has access to the CHEN20012 course materials and can help with theoretical concepts.
+        3. AI-Chris will guide you toward understanding and track your progress
         """)
     
     # Get module from session state
@@ -387,15 +470,25 @@ def main():
         
         # Add progress message if available
         if progress_summary:
-            initial_messages.insert(1, {
+            progress_message = f"""
+**Your Current Progress:**
+            
+**Competency Levels:**
+🔴 Not started
+🟠 In Progress
+✅ Completed
+            
+**Topics:**
+{progress_summary}
+            
+Let's continue building your understanding!
+            """
+            initial_messages.insert(0, {
                 "role": "assistant",
-                "content": f"Here's your current progress in this module:\n\n{progress_summary}\n\nLet's continue learning!"
+                "content": progress_message
             })
         
         st.session_state[chat_history_key] = initial_messages
-        if st.session_state.get("debug_mode", False):
-            st.write("Initialized new chat history for module:", module)
-            st.write("Initial messages:", initial_messages)
     
     # Create a sidebar for navigation
     with st.sidebar:
@@ -404,6 +497,17 @@ def main():
         
         st.header("Current Module")
         st.write(f"Module: {module_name}")
+        
+        # Display current progress in sidebar
+        if progress_summary:
+            st.header("Your Progress")
+            st.markdown("""
+            **Competency Levels:**
+            - 🔴 Not started
+            - 🟠 In Progress
+            - ✅ Completed
+            """)
+            st.markdown(progress_summary)
         
         # Add debug mode toggle
         st.markdown("---")
@@ -433,16 +537,17 @@ def main():
     st.subheader(module_data.get("description", ""))
     st.write(module_data.get("content", ""))
     
-    # Display key topics
+    # Display key topics with progress
     if "topics" in module_data and module_data["topics"]:
         with st.expander("Module Topics", expanded=True):
             for i, topic in enumerate(module_data["topics"], 1):
-                st.markdown(f"**{i}.** {topic}")
-                
-    # Add a note about the module PDF
-    pdf_path = f"knowledge/module{module_id}.pdf"
-    if os.path.exists(pdf_path):
-        st.info(f"📚 This module's content is based on the materials in '{pdf_path}'.")
+                topic_name = topic.get("name", str(topic))
+                # Get progress for this topic from progress_summary
+                progress_line = next(
+                    (line for line in progress_summary.split("\n") if topic_name in line),
+                    f"🔴 {topic_name}"
+                ) if progress_summary else f"🔴 {topic_name}"
+                st.markdown(f"{progress_line}")
     
     # Add a divider before the chat
     st.markdown("---")
