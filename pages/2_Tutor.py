@@ -425,7 +425,7 @@ def main():
         initial_messages = [
             {
                 "role": "assistant",
-                "content": f"Hi, I'm AI-Chris, your tutor for {module_name}. What would you like to learn about?"
+                "content": f"Hi, I'm AI-Chris, your tutor for {module_name}. What topic would you like to learn about?"
             }
         ]
         
