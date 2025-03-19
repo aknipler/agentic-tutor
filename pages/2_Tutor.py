@@ -3,7 +3,7 @@ import time
 import os
 import openai
 import json
-from mongodb.connector import get_user_progress as get_mongo_user_progress, update_competency, get_topic_competency
+from mongodb.connector import get_user_progress as get_mongo_user_progress, update_competency, get_topic_competency, get_modules_data, get_module_by_id
 
 # Check if user is logged in
 if "logged_in" not in st.session_state or not st.session_state.logged_in:
@@ -29,33 +29,26 @@ def load_tutor_prompt():
         st.error(f"Error loading tutor prompt: {str(e)}")
         return "Error loading tutor prompt. Please check if the file exists."
 
-# Load module data from JSON
-@st.cache_data
+# Load module data from MongoDB
+@st.cache_data(ttl=10)
 def load_modules_data():
-    """Load module information from the modules.json file"""
+    """Load module information from MongoDB"""
     try:
-        with open("data/modules.json", "r", encoding="utf-8") as f:
-            return json.load(f)
-    except UnicodeDecodeError:
-        # Try with a different encoding if UTF-8 fails
-        try:
-            with open("data/modules.json", "r", encoding="latin-1") as f:
-                return json.load(f)
-        except Exception as e:
-            st.error(f"Error loading modules data with alternate encoding: {str(e)}")
-            return {}
+        data = get_modules_data()
+        if st.session_state.get('debug_mode', False):
+            st.write("Debug: Modules data loaded:", data)
+        return data
     except Exception as e:
-        st.error(f"Error loading modules data: {str(e)}")
-        # Return default data if file not found or error
-        return {}
+        st.error(f"Error loading modules data from MongoDB: {str(e)}")
+        return {"modules": []}
 
 # Get relevant content for a module
 @st.cache_data
 def get_module_content(module):
     """
-    Retrieve relevant context for a specific module from the modules.json file.
+    Retrieve relevant context for a specific module from MongoDB.
     """
-    # Load modules data from JSON
+    # Load modules data from MongoDB
     modules_data = load_modules_data()
     
     # Get module info
@@ -93,33 +86,8 @@ def get_module_content(module):
                 return context, module_title
         except (ValueError, IndexError):
             pass  # Fall through to default if index is invalid
-    else:
-        # Old format - direct lookup by key
-        if module_id in modules_data:
-            module_content = modules_data[module_id]
-            
-            # Format topics list
-            topics = module_content.get("topics", [])
-            topic_names = []
-            for topic in topics:
-                if isinstance(topic, dict):
-                    topic_names.append(topic.get('name', 'Unnamed Topic'))
-                else:
-                    topic_names.append(str(topic))
-            
-            # Build formatted context string
-            context = f"""
-            Module: {module_content['name']}
-            Description: {module_content.get('description', '')}
-            Content: {module_content.get('content', '')}
-            
-            Key Topics:
-            {', '.join(topic_names)}
-            """
-            
-            return context, module_content["name"]
     
-    # Default fallback if module not found in either format
+    # Default fallback if module not found
     default_title = f"Module {module}"
     default_context = f"""
     Module: {default_title}
@@ -157,20 +125,19 @@ def get_user_progress(module):
     Get the user's progress for topics in the current module.
     """
     try:
-        # Use the authenticated user ID instead of default 'user123'
+        # Use the authenticated user ID
         user_id = st.session_state.user_id
         progress_data = get_mongo_user_progress(user_id)
         
         if not progress_data:
             return None
             
-        # Get module topics from modules data
+        # Get module topics from MongoDB
         modules_data = load_modules_data()
         module_id = str(module)
         
-        # Handle both old and new module data formats
+        # Get topics for the current module
         if "modules" in modules_data and isinstance(modules_data["modules"], list):
-            # New format - modules is a list
             try:
                 module_index = int(module_id) - 1
                 if 0 <= module_index < len(modules_data["modules"]):
@@ -180,10 +147,6 @@ def get_user_progress(module):
                     return None
             except (ValueError, IndexError):
                 return None
-        else:
-            # Old format - direct lookup
-            module_data = modules_data.get(module_id, {})
-            topics = module_data.get("topics", [])
         
         # Create a progress summary
         progress_summary = []
@@ -195,12 +158,10 @@ def get_user_progress(module):
         progress_map = {}
         for topic in progress_topics:
             topic_name = topic.get("name", "")
-            # Handle both MongoDB format and direct number format
-            progress = topic.get("progress", {})
+            # Handle MongoDB format
+            progress = topic.get("progress", 0)
             if isinstance(progress, dict):
                 progress = int(progress.get("$numberInt", "0"))
-            else:
-                progress = int(progress)
             progress_map[topic_name] = progress
         
         # Build progress summary using both topic lists
@@ -451,7 +412,7 @@ def main():
     if "module" not in st.session_state:
         st.session_state.module = module
     
-    # Get module content
+    # Get module content from MongoDB
     module_context, module_name = get_module_content(st.session_state.module)
     
     # Get user's progress
@@ -527,27 +488,37 @@ Let's continue building your understanding!
         - Don't be afraid to make mistakes - they're part of learning!
         """)
     
-    # Get full module data
+    # Get module data from MongoDB
     modules_data = load_modules_data()
     module_id = str(st.session_state.module)
-    module_data = modules_data.get(module_id, {})
+    
+    # Get the specific module data
+    module_data = None
+    if "modules" in modules_data and isinstance(modules_data["modules"], list):
+        try:
+            module_index = int(module_id) - 1
+            if 0 <= module_index < len(modules_data["modules"]):
+                module_data = modules_data["modules"][module_index]
+        except (ValueError, IndexError):
+            pass
     
     # Display module information
     st.header(f"Module {module_id}: {module_name}")
-    st.subheader(module_data.get("description", ""))
-    st.write(module_data.get("content", ""))
-    
-    # Display key topics with progress
-    if "topics" in module_data and module_data["topics"]:
-        with st.expander("Module Topics", expanded=True):
-            for i, topic in enumerate(module_data["topics"], 1):
-                topic_name = topic.get("name", str(topic))
-                # Get progress for this topic from progress_summary
-                progress_line = next(
-                    (line for line in progress_summary.split("\n") if topic_name in line),
-                    f"🔴 {topic_name}"
-                ) if progress_summary else f"🔴 {topic_name}"
-                st.markdown(f"{progress_line}")
+    if module_data:
+        st.subheader(module_data.get("description", ""))
+        st.write(module_data.get("content", ""))
+        
+        # Display key topics with progress
+        if "topics" in module_data and module_data["topics"]:
+            with st.expander("Module Topics", expanded=True):
+                for i, topic in enumerate(module_data["topics"], 1):
+                    topic_name = topic.get("name", str(topic))
+                    # Get progress for this topic from progress_summary
+                    progress_line = next(
+                        (line for line in progress_summary.split("\n") if topic_name in line),
+                        f"🔴 {topic_name}"
+                    ) if progress_summary else f"🔴 {topic_name}"
+                    st.markdown(f"{progress_line}")
     
     # Add a divider before the chat
     st.markdown("---")
