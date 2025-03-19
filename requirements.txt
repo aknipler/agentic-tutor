@@ -1,4 +1,4 @@
-openai>=1.66.3
+openai==1.66.3
 streamlit==1.40.2
 nltk==3.9.1
 pymongo>=4.7
