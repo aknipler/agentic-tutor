@@ -343,181 +343,188 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
         # Display module information
         st.markdown(module_description)
         
-        # Render progress summary
-        render_progress_summary(progress_summary)
+        # Create containers for different sections
+        progress_container = st.container()
+        chat_container = st.container()
+        tutorial_container = st.container()
         
-        # Add a divider before the chat
-        st.markdown("---")
-        st.subheader("Chat with AI-Chris")
+        # Render progress summary in its container
+        with progress_container:
+            render_progress_summary(progress_summary)
         
-        # Display chat history immediately
-        if chat_history_key in st.session_state:
-            print(f"[Tutor Interface] Displaying chat history for module {module_id}. Chat history length: {len(st.session_state[chat_history_key])}")
-            render_chat_history(st.session_state[chat_history_key])
-        else:
-            print(f"[Tutor Interface] No chat history found for module {module_id}")
-        
-        # Chat input
-        if prompt := st.chat_input("Ask the tutor a question about this topic..."):
-            try:
-                # Add user message to chat history
-                st.session_state[chat_history_key].append(
-                    ChatMessage(role="user", content=prompt).to_dict()
-                )
-                
-                # Display user message
-                with st.chat_message("user"):
-                    st.markdown(prompt)
-                
-                # Get and display assistant response
-                with st.chat_message("assistant"):
-                    with st.spinner("AI-Chris is thinking..."):
-                        response = get_bot_response(prompt, module_id, file_id)
-                        # Only display response if it's not empty (topic not completed)
-                        if response:
-                            st.markdown(response)
-                        
-                        # Check if we should move to the next topic
-                        current_topic = st.session_state.get("current_topic")
-                        if current_topic:
-                            # Use handle_competency_check instead of direct get_topic_competency call
-                            competency_result = handle_competency_check(
-                                {"topic_name": current_topic["name"]}, 
-                                st.session_state.user_id
-                            )
-                            try:
-                                competency_data = json.loads(competency_result)
-                                if competency_data.get("progress", 0) >= 2:
-                                    print(f"[Topic Completion] Topic: {current_topic['name']}, Final Progress: {competency_data.get('progress', 0)}")
-                                    # Topic completed, get next topic
-                                    next_topic = get_next_non_competent_topic(module_id)
-                                    if next_topic:
-                                        print(f"[Topic Transition] From: {current_topic['name']}, To: {next_topic['name']}")
-                                        st.session_state["current_topic"] = next_topic
-                                        # Show simple congratulatory message with tick
-                                        st.success(f"✅ {current_topic['name']}")
-                                        # Clear chat history for the new topic
-                                        st.session_state[chat_history_key] = []
-                                        
-                                        # Generate initial question for the new topic
-                                        try:
-                                            client = setup_openai_client()
-                                            topic_description = next_topic.get('description', '')  # Get description if available, empty string if not
-                                            initial_prompt = f"""You are starting a new topic: {next_topic['name']}
-                                            {f'Topic description: {topic_description}' if topic_description else ''}
-                                            
-                                            Your task is to:
-                                            1. Begin with a direct, engaging question that immediately focuses on the core concept of the topic
-                                            2. The question should be specific and practical, relating to real-world chemical engineering applications
-                                            3. Avoid generic introductions or small talk - get straight to the topic
-                                            4. Make the question challenging but approachable, encouraging critical thinking
-                                            5. If possible, include a brief real-world scenario or example to make the question more concrete
-                                            
-                                            Generate your response as a single, focused Socratic question that will start the discussion. Do not include any introductory text or explanations - just the question itself."""
-                                            
-                                            response = client.responses.create(
-                                                model=TutorConfig.MODEL_NAME,
-                                                instructions=initial_prompt,
-                                                input=[{"role": "system", "content": initial_prompt}],
-                                                tools=[]
-                                            )
-
-                                            # Add the initial question to chat history without displaying it directly
-                                            st.session_state[chat_history_key].append(
-                                                ChatMessage(
-                                                    role="assistant",
-                                                    content=response.output_text,
-                                                    response_id=response.id
-                                                ).to_dict()
-                                            )
-                                            
-                                            # Display the new chat history immediately
-                                            render_chat_history(st.session_state[chat_history_key])
-                                        except Exception as e:
-                                            print(f"[Error] Failed to generate initial question for {next_topic['name']}: {str(e)}")
-                                            if st.session_state.get("debug_mode", False):
-                                                st.error(f"Error generating initial question: {str(e)}")
-                                            raise  # Re-raise the exception to be handled by the caller
-                                    else:
-                                        print("[Module Completion] All topics completed in module")
-                                        st.success("🎉 Congratulations! You've completed all topics in this module!")
-                                        return
-                            except json.JSONDecodeError:
-                                # If the result isn't JSON, assume topic is not completed
-                                pass
-                        
-            except Exception as e:
-                print(f"[Error] Failed to process message: {str(e)}")
-                st.error(f"Error processing your message: {str(e)}")
-                if st.session_state.get("debug_mode", False):
-                    st.exception(e)
-                st.info("Please try rephrasing your question or try again later.")
-        
-        # Add tutorial questions section below chat input
-        st.markdown("---")
-        st.subheader("Tutorial Questions")
-        
-        # Get tutorial questions for the current module
-        modules_data = get_modules_data()
-        if "modules" in modules_data and isinstance(modules_data["modules"], list):
-            module_data = None
-            target_title = MODULE_TITLES.get(str(module_id))
+        # Render chat interface in its container
+        with chat_container:
+            # Add a divider before the chat
+            st.markdown("---")
+            st.subheader("Chat with AI-Chris")
             
-            if target_title:
-                for m in modules_data["modules"]:
-                    if m.get("title") == target_title:
-                        module_data = m
-                        break
-            
-            if module_data:
-                tutorial_questions = module_data.get("tutorial_questions", {})
-                if isinstance(tutorial_questions, list):
-                    # Convert list format to dictionary format
-                    tutorial_questions = {f"q{i+1}": q for i, q in enumerate(tutorial_questions)}
-                
-                if tutorial_questions:
-                    # Get user progress data
-                    user_progress = get_user_progress(st.session_state.user_id)
-                    user_questions = {q["question_id"]: q for q in user_progress.get("tutorial_questions", [])}
-                    
-                    for question_id, question_info in tutorial_questions.items():
-                        if not isinstance(question_info, dict):
-                            continue
-                        
-                        question_title = question_info.get("question", f"Question {question_id}")
-                        
-                        # Get question progress data
-                        q_data = user_questions.get(question_id, {})
-                        progress = q_data.get("progress", 0)
-                        status = "completed" if progress >= 2 else "in_progress" if progress >= 1 else "not_started"
-                        status_emoji = "✅" if status == "completed" else "🟠" if status == "in_progress" else "🔴"
-                        attempts = q_data.get("attempts", 0)
-                        
-                        # Create columns for status, button, and question
-                        col1, col2, col3 = st.columns([1, 1, 5])
-                        
-                        with col1:
-                            st.markdown(f"<span style='color:{'green' if status == 'completed' else 'orange' if status == 'in_progress' else 'red'}'>{status_emoji}</span>", unsafe_allow_html=True)
-                        
-                        with col2:
-                            # Create link to assessor with query parameters
-                            assessor_url = f"{BASE_URL}Assessor?module={module_id}&question={question_id}"
-                            st.page_link(
-                                assessor_url,
-                                label="Try Question",
-                                help=f"Attempts: {attempts}"
-                            )
-                        
-                        with col3:
-                            st.markdown(question_title)
-                            if attempts > 0:
-                                st.caption(f"Attempts: {attempts}")
-                else:
-                    st.info("No tutorial questions available for this module.")
+            # Display chat history immediately
+            if chat_history_key in st.session_state:
+                print(f"[Tutor Interface] Displaying chat history for module {module_id}. Chat history length: {len(st.session_state[chat_history_key])}")
+                render_chat_history(st.session_state[chat_history_key])
             else:
-                st.warning("Module data not found.")
-        else:
-            st.warning("Unable to load module data.")
+                print(f"[Tutor Interface] No chat history found for module {module_id}")
+            
+            # Chat input
+            if prompt := st.chat_input("Display your competency by answering questions..."):
+                try:
+                    # Add user message to chat history
+                    st.session_state[chat_history_key].append(
+                        ChatMessage(role="user", content=prompt).to_dict()
+                    )
+                    
+                    # Display user message
+                    with st.chat_message("user"):
+                        st.markdown(prompt)
+                    
+                    # Get and display assistant response
+                    with st.chat_message("assistant"):
+                        with st.spinner("AI-Chris is thinking..."):
+                            response = get_bot_response(prompt, module_id, file_id)
+                            # Only display response if it's not empty (topic not completed)
+                            if response:
+                                st.markdown(response)
+                            
+                            # Check if we should move to the next topic
+                            current_topic = st.session_state.get("current_topic")
+                            if current_topic:
+                                # Use handle_competency_check instead of direct get_topic_competency call
+                                competency_result = handle_competency_check(
+                                    {"topic_name": current_topic["name"]}, 
+                                    st.session_state.user_id
+                                )
+                                try:
+                                    competency_data = json.loads(competency_result)
+                                    if competency_data.get("progress", 0) >= 2:
+                                        print(f"[Topic Completion] Topic: {current_topic['name']}, Final Progress: {competency_data.get('progress', 0)}")
+                                        # Topic completed, get next topic
+                                        next_topic = get_next_non_competent_topic(module_id)
+                                        if next_topic:
+                                            print(f"[Topic Transition] From: {current_topic['name']}, To: {next_topic['name']}")
+                                            st.session_state["current_topic"] = next_topic
+                                            # Show simple congratulatory message with tick
+                                            st.success(f"✅ {current_topic['name']}")
+                                            # Clear chat history for the new topic
+                                            st.session_state[chat_history_key] = []
+                                            
+                                            # Generate initial question for the new topic
+                                            try:
+                                                client = setup_openai_client()
+                                                topic_description = next_topic.get('description', '')  # Get description if available, empty string if not
+                                                initial_prompt = f"""You are starting a new topic: {next_topic['name']}
+                                                {f'Topic description: {topic_description}' if topic_description else ''}
+                                                
+                                                Your task is to:
+                                                1. Begin with a direct, engaging question that immediately focuses on the core concept of the topic
+                                                2. The question should be specific and practical, relating to real-world chemical engineering applications
+                                                3. Avoid generic introductions or small talk - get straight to the topic
+                                                4. Make the question challenging but approachable, encouraging critical thinking
+                                                5. If possible, include a brief real-world scenario or example to make the question more concrete
+                                                
+                                                Generate your response as a single, focused Socratic question that will start the discussion. Do not include any introductory text or explanations - just the question itself."""
+                                                
+                                                response = client.responses.create(
+                                                    model=TutorConfig.MODEL_NAME,
+                                                    instructions=initial_prompt,
+                                                    input=[{"role": "system", "content": initial_prompt}],
+                                                    tools=[]
+                                                )
+
+                                                # Add the initial question to chat history without displaying it directly
+                                                st.session_state[chat_history_key].append(
+                                                    ChatMessage(
+                                                        role="assistant",
+                                                        content=response.output_text,
+                                                        response_id=response.id
+                                                    ).to_dict()
+                                                )
+                                                
+                                                # Display the new chat history immediately
+                                                render_chat_history(st.session_state[chat_history_key])
+                                            except Exception as e:
+                                                print(f"[Error] Failed to generate initial question for {next_topic['name']}: {str(e)}")
+                                                if st.session_state.get("debug_mode", False):
+                                                    st.error(f"Error generating initial question: {str(e)}")
+                                                raise  # Re-raise the exception to be handled by the caller
+                                        else:
+                                            print("[Module Completion] All topics completed in module")
+                                            st.success("🎉 Congratulations! You've completed all topics in this module!")
+                                            return
+                                except json.JSONDecodeError:
+                                    # If the result isn't JSON, assume topic is not completed
+                                    pass
+                            
+                except Exception as e:
+                    print(f"[Error] Failed to process message: {str(e)}")
+                    st.error(f"Error processing your message: {str(e)}")
+                    if st.session_state.get("debug_mode", False):
+                        st.exception(e)
+                    st.info("Please try rephrasing your question or try again later.")
+        
+        # Render tutorial questions in its container
+        with tutorial_container:
+            # Add tutorial questions section
+            st.markdown("---")
+            st.subheader("Tutorial Questions")
+            
+            # Get tutorial questions for the current module
+            modules_data = get_modules_data()
+            if "modules" in modules_data and isinstance(modules_data["modules"], list):
+                module_data = None
+                target_title = MODULE_TITLES.get(str(module_id))
+                
+                if target_title:
+                    for m in modules_data["modules"]:
+                        if m.get("title") == target_title:
+                            module_data = m
+                            break
+                
+                if module_data:
+                    tutorial_questions = module_data.get("tutorial_questions", {})
+                    if isinstance(tutorial_questions, list):
+                        # Convert list format to dictionary format
+                        tutorial_questions = {f"q{i+1}": q for i, q in enumerate(tutorial_questions)}
+                    
+                    if tutorial_questions:
+                        # Get user progress data
+                        user_progress = get_user_progress(st.session_state.user_id)
+                        user_questions = {q["question_id"]: q for q in user_progress.get("tutorial_questions", [])}
+                        
+                        for question_id, question_info in tutorial_questions.items():
+                            if not isinstance(question_info, dict):
+                                continue
+                            
+                            question_title = question_info.get("question", f"Question {question_id}")
+                            
+                            # Get question progress data
+                            q_data = user_questions.get(question_id, {})
+                            progress = q_data.get("progress", 0)
+                            status = "completed" if progress >= 2 else "in_progress" if progress >= 1 else "not_started"
+                            status_emoji = "✅" if status == "completed" else "🟠" if status == "in_progress" else "🔴"
+                            attempts = q_data.get("attempts", 0)
+                            
+                            # Create columns for status, button, and question
+                            col1, col2, col3 = st.columns([1, 6, 2])
+                            
+                            with col1:
+                                st.markdown(f"<span style='color:{'green' if status == 'completed' else 'orange' if status == 'in_progress' else 'red'}'>{status_emoji}</span>", unsafe_allow_html=True)
+                            
+                            with col3:
+                                # Create link to assessor with query parameters
+                                assessor_url = f"{BASE_URL}Assessor?module={module_id}&question={question_id}"
+                                if st.button("Try Question", key=f"try_question_{question_id}", help=f"Attempts: {attempts}"):
+                                    st.switch_page("pages/8_Assessor.py")
+                            
+                            with col2:
+                                st.markdown(question_title)
+                                if attempts > 0:
+                                    st.caption(f"Attempts: {attempts}")
+                    else:
+                        st.info("No tutorial questions available for this module.")
+                else:
+                    st.warning("Module data not found.")
+            else:
+                st.warning("Unable to load module data.")
                 
     except Exception as e:
         st.error(f"Error rendering tutor interface: {str(e)}")

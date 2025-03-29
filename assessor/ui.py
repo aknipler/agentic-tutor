@@ -42,10 +42,9 @@ def render_module_selector(modules: List[Dict]) -> str:
 
 def render_question(question_id: str, question_info: Dict, user_id: str, module_id: str):
     """Render a single question with its answer input and file upload"""
-    with st.expander(f"Question {question_id}", expanded=False):
+    question_text = question_info.get("question", f"Question {question_id}")
+    with st.expander(question_text, expanded=False):
         # Display the question
-        question_text = question_info.get("question", "")
-        st.write(question_text)
         
         # Get and display question progress
         module_progress = get_user_module_progress(user_id, module_id)
@@ -60,62 +59,85 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
         if assessment and assessment.get("assessed", False):
             with st.container(border=True):
                 st.subheader("Assessment Results")
-                score = assessment.get("score", 0)
-                st.progress(score)
-                st.write(f"Score: {int(score * 100)}%")
+                competency_level = assessment.get("competency_level", 0)
+                # Convert competency level to progress (0->0.33, 1->0.66, 2->1.0)
+                progress = competency_level / 2
+                st.progress(progress)
+                competency_text = {
+                    0: "No Understanding",
+                    1: "Partial Understanding",
+                    2: "Full Understanding"
+                }.get(competency_level, "Unknown")
+                st.write(f"Competency Level: {competency_text}")
                 st.write(f"Feedback: {assessment.get('feedback', 'No feedback available.')}")
         
         # Answer input
         answer = st.text_area("Your Answer", key=f"answer_{question_id}")
         
-        # File upload
-        uploaded_file = st.file_uploader(
-            "Upload Worked Solution (Optional)", 
-            type=["png", "jpg", "jpeg"], 
-            key=f"upload_{question_id}"
+        # File upload - Allow multiple files
+        uploaded_files = st.file_uploader(
+            "Upload Worked Solution(s)",
+            type=["png", "jpg", "jpeg"],
+            key=f"upload_{question_id}",
+            accept_multiple_files=True # Allow multiple files
         )
         
         # Submit button
         if st.button("Submit Answer", key=f"submit_{question_id}"):
-            if answer.strip():
-                # Process file upload first
-                file_path = None
-                image_url = None
-                
-                if uploaded_file:
-                    with st.spinner("Uploading your solution..."):
-                        file_path = save_uploaded_file(uploaded_file, user_id, question_id)
-                        if file_path:
-                            image_url = get_file_url(file_path)
-                
+            if answer.strip() or uploaded_files:
+                # Increment attempts *before* assessment
+                new_attempts = attempts + 1
+                update_question_progress(user_id, module_id, question_id, {"attempts": new_attempts})
+                # Optional: Add a log or print statement for debugging
+                # print(f"Attempt {new_attempts} recorded for {user_id}, Module {module_id}, Question {question_id}")
+
+                # Process file uploads
+                image_data_list = []
+                if uploaded_files:
+                    with st.spinner("Processing uploaded solution(s)..."):
+                        for uploaded_file in uploaded_files:
+                            # Read file content as bytes
+                            image_bytes = uploaded_file.read()
+                            image_data_list.append(image_bytes)
+                            # Removed saving to file system: file_path = save_uploaded_file(...)
+                            # Removed getting file URL: image_url = get_file_url(...)
+
                 # Assess the answer
                 with st.spinner("Assessing your answer..."):
+                    # Fetch the expected answer from question_info
+                    expected_answer_text = question_info.get("expected_answer", "No expected answer provided.") # Default if not found
+
+                    # Pass image data list and expected answer
                     assessment = assess_answer(
                         question=question_text,
-                        answer=answer,
-                        image_url=image_url
+                        answer=answer.strip() if answer.strip() else "No text answer provided. Please refer to the uploaded solution(s).",
+                        expected_answer=expected_answer_text, # Pass the expected answer
+                        image_data_list=image_data_list
                     )
-                    
-                    # Save assessment results
+
+                    # Save assessment results, including the new fields
                     save_assessment_results(
                         user_id=user_id,
                         module_id=module_id,
                         question_id=question_id,
-                        score=assessment["score"],
+                        competency_level=assessment["competency_level"],
                         feedback=assessment["feedback"],
-                        status=assessment["status"]
+                        status=assessment["status"],
+                        response_text=assessment["response_text"], # Pass response_text
+                        input_image_data=assessment["input_image_data"] # Pass image data
                     )
-                    
+
                     # Display assessment results
                     st.success("Your answer has been assessed!")
                     
                     with st.container(border=True):
                         st.subheader("Assessment Results")
-                        st.progress(assessment["score"])
-                        st.write(f"Score: {int(assessment['score'] * 100)}%")
+                        # Convert competency level to progress (0->0.33, 1->0.66, 2->1.0)
+                        progress = assessment["competency_level"] / 2
+                        st.progress(progress)
                         st.write(f"Feedback: {assessment['feedback']}")
                     
                     # Refresh the page to update the status
                     st.rerun()
             else:
-                st.warning("Please provide an answer before submitting.") 
+                st.warning("Please provide either a text answer or upload a solution (or both) before submitting.") 

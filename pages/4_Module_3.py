@@ -15,7 +15,7 @@ def load_module_data():
         data = get_modules_data()
         if "modules" in data and isinstance(data["modules"], list):
             # Find the module with the specific title
-            target_title = "Small Kit - Sensors and Valves"
+            target_title = "Small Kit - Sensors and Valves" # Corrected title
             for module in data["modules"]:
                 if module.get("title") == target_title:
                     return module
@@ -37,7 +37,7 @@ def main():
     # Render the tutor interface
     render_tutor_interface(
         module_id="3",
-        module_title=module_data.get("title", "Large Kit - Reactors"),
+        module_title=module_data.get("title", "Small Kit - Sensors and Valves"), # Corrected default title
         module_description=module_data.get("description", ""),
         topics=module_data.get("topics", []),
         file_id=st.session_state.get("module_3_file_id")

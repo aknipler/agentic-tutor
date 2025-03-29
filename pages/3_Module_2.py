@@ -37,7 +37,7 @@ def main():
     # Render the tutor interface
     render_tutor_interface(
         module_id="2",
-        module_title=module_data.get("title", "Thermodynamics"),
+        module_title=module_data.get("title", "Graphical Process Diagrams"),
         module_description=module_data.get("description", ""),
         topics=module_data.get("topics", []),
         file_id=st.session_state.get("module_2_file_id")

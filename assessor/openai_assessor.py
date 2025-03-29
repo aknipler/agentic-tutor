@@ -1,7 +1,8 @@
 import os
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 import streamlit as st
 from openai import OpenAI
+import base64
 
 def initialize_openai_client() -> OpenAI:
     """Initialize the OpenAI client with API key from environment variable"""
@@ -13,9 +14,10 @@ def initialize_openai_client() -> OpenAI:
     return OpenAI(api_key=api_key)
 
 def assess_answer(
-    question: str, 
-    answer: str, 
-    image_url: Optional[str] = None,
+    question: str,
+    answer: str,
+    expected_answer: str,
+    image_data_list: Optional[List[bytes]] = None,
     model: str = "gpt-4o-mini"
 ) -> Dict:
     """
@@ -24,83 +26,173 @@ def assess_answer(
     Args:
         question: The question text
         answer: The student's answer text
-        image_url: Optional URL to an image the student uploaded
+        expected_answer: The expected/model answer text
+        image_data_list: Optional list of image bytes for images the student uploaded
         model: The OpenAI model to use for assessment
         
     Returns:
         Dictionary containing assessment results:
         {
-            "score": float,  # Score between 0 and 1
-            "feedback": str,  # Feedback for the student
-            "status": str,    # Status (completed, in_progress)
+            "competency_level": int,  # Competency level (0, 1, or 2)
+            "feedback": str,          # Feedback for the student
+            "status": str,            # Status (completed, in_progress)
+            "response_text": str,     # Raw response text from OpenAI
+            "input_image_data": Optional[List[bytes]] # List of input image bytes
         }
     """
+    print(f"Assessing answer: {expected_answer}")
     # Initialize OpenAI client
     client = initialize_openai_client()
     if not client:
         return {
-            "score": 0,
+            "competency_level": 0,
             "feedback": "Unable to assess answer. Please try again later.",
-            "status": "in_progress"
+            "status": "in_progress",
+            "response_text": "",
+            "input_image_data": image_data_list
         }
     
-    # Build content list for the API request
-    content = [
-        {"type": "input_text", "text": f"As an education assessor, evaluate this student's answer to the following question:\n\nQuestion: {question}\n\nStudent Answer: {answer}\n\nProvide a score from 0 to 100 and constructive feedback. Format your response as:\nScore: [score]\nFeedback: [feedback]"}
+    # Define the core instructions for the assessor role
+    core_instructions = f"""As an education assessor, evaluate the student's answer provided in the user message based on the question and expected answer provided in the system message context.
+
+Provide a competency level (0, 1, or 2) and constructive feedback. Use the following criteria:
+- Level 0: No attempt
+- Level 1: Answer with some understanding
+- Level 2: Correct answer
+
+**Format the feedback using markdown for clarity (e.g., use bullet points or bold text where appropriate).**
+
+Format your response strictly as:
+Competency Level: [level]
+Feedback: [feedback]"""
+
+    # Build user submission content (Student Answer + Images)
+    user_submission_content = [
+        {"type": "input_text", "text": f"Student Answer: {answer}"}
     ]
-    
-    # Add image if provided
-    if image_url:
-        content.append({
-            "type": "input_image",
-            "image_url": image_url,
-            "detail": "high"
-        })
-    
+
+    # Add images to user submission content if provided
+    if image_data_list:
+        for image_data in image_data_list:
+            try:
+                base64_image = base64.b64encode(image_data).decode('utf-8')
+                data_uri = f"data:image/jpeg;base64,{base64_image}" # Assuming jpeg
+                user_submission_content.append({
+                    "type": "input_image", 
+                    "image_url": {
+                        "url": data_uri,
+                        "detail": "high"
+                    }
+                })
+            except Exception as e:
+                st.warning(f"Could not process one of the images: {e}")
+
+    # Default values before API call
+    competency_level = 0
+    feedback = "Error during assessment process."
+    status = "in_progress"
+    response_text = ""
+
     try:
-        # Call OpenAI API
-        response = client.responses.create(
-            model=model,
-            input=[{
-                "role": "user",
-                "content": content,
-            }],
-        )
-        
-        # Extract score and feedback from response
-        response_text = response.output_text
-        
-        # Simple parsing of response text
-        score = 0
-        feedback = "No feedback provided."
-        
-        for line in response_text.split('\n'):
-            if line.lower().startswith("score:"):
+        # --- Refactored API Call ---
+        # Prepare messages for the chat completions endpoint
+        messages = []
+
+        # System message combining instructions and context
+        system_prompt = f"""{core_instructions}
+
+Context for Assessment:
+Question: {question}
+
+Expected Answer: {expected_answer}"""
+        messages.append({"role": "system", "content": system_prompt})
+
+        # User message combining student answer and images
+        user_content = [{"type": "text", "text": f"Student Answer: {answer}"}]
+        if image_data_list:
+            for image_data in image_data_list:
                 try:
-                    # Extract number from the score line
-                    score_text = line.split(':', 1)[1].strip()
-                    score = float(score_text.split('/')[0].strip()) if '/' in score_text else float(score_text)
-                    # Normalize to 0-1 scale if score is out of 100
-                    if score > 1:
-                        score /= 100
-                except:
+                    base64_image = base64.b64encode(image_data).decode('utf-8')
+                    data_uri = f"data:image/jpeg;base64,{base64_image}" # Assuming jpeg
+                    user_content.append({
+                        "type": "image_url",
+                        "image_url": {
+                            "url": data_uri,
+                            "detail": "high" # or "low" or "auto"
+                        }
+                    })
+                except Exception as e:
+                    st.warning(f"Could not process one of the images for API call: {e}")
+        
+        messages.append({"role": "user", "content": user_content})
+
+        # Call OpenAI Chat Completions API
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=300 # Add a reasonable max_tokens limit
+        )
+
+        # Extract content from the response
+        response_text = response.choices[0].message.content if response.choices else ""
+        # --- End Refactored API Call ---
+
+        # Reset defaults for parsing
+        competency_level = 0
+        feedback = "No feedback provided." # Default feedback
+
+        # --- Revised Feedback Extraction --- 
+        try:
+            # Find the position of "Feedback:" case-insensitively
+            feedback_marker = "feedback:"
+            feedback_start_index = response_text.lower().index(feedback_marker)
+            
+            # Extract everything after the marker
+            raw_feedback = response_text[feedback_start_index + len(feedback_marker):]
+            
+            # Strip leading/trailing whitespace/newlines
+            feedback = raw_feedback.strip()
+            
+            # If feedback is empty after stripping, revert to default
+            if not feedback:
+                feedback = "No feedback provided."
+                
+        except ValueError:
+            # "Feedback:" marker not found, keep default feedback
+            st.warning("Could not find 'Feedback:' marker in the response.")
+            pass # Keep default feedback = "No feedback provided."
+        # --- End Revised Feedback Extraction ---
+
+        # Parse competency level (keep existing logic)
+        for line in response_text.split('\n'):
+            if line.lower().startswith("competency level:"):
+                try:
+                    # Extract number from the competency level line
+                    level_text = line.split(':', 1)[1].strip()
+                    competency_level = int(level_text)
+                    # Ensure competency level is between 0 and 2
+                    competency_level = max(0, min(2, competency_level))
+                except ValueError:
+                    st.warning(f"Could not parse competency level from line: {line}")
                     pass
-            elif line.lower().startswith("feedback:"):
-                feedback = line.split(':', 1)[1].strip()
-        
-        # Determine status based on score
-        status = "completed" if score >= 0.7 else "in_progress"
-        
+
+        # Determine status based on competency level
+        status = "completed" if competency_level >= 1 else "in_progress"
+
         return {
-            "score": score,
+            "competency_level": competency_level,
             "feedback": feedback,
-            "status": status
+            "status": status,
+            "response_text": response_text,
+            "input_image_data": image_data_list
         }
-        
+
     except Exception as e:
         st.error(f"Error assessing answer: {str(e)}")
         return {
-            "score": 0,
+            "competency_level": 0,
             "feedback": f"Error assessing answer: {str(e)}",
-            "status": "in_progress"
+            "status": "in_progress",
+            "response_text": "",
+            "input_image_data": image_data_list
         } 
