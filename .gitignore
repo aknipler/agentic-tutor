@@ -1,3 +1,5 @@
 .streamlit/
 .venv/
 .github/
+*.pyc
+.DS_Store

@@ -1,5 +1,5 @@
 import streamlit as st
-from mongodb.connector import get_modules_data, get_user_progress, update_user_progress
+from mongodb.connectors import get_modules_data, get_user_progress, update_user_progress
 from datetime import datetime
 
 BASE_URL = "http://localhost:8501/"
@@ -70,8 +70,8 @@ def overview():
         ### How to Use This Learning Assistant
         
         **For General Learning:**
-        - Click on "Go to Module X Tutor" to interact with the AI tutor for that module
-        - Use the tutor to explore concepts and ask questions about the module topics
+        - Use the sidebar menu to navigate to different modules
+        - Each module has its own dedicated page with the AI tutor
         
         **For Topic Assessment:**
         - Click on any specific topic to test your knowledge with the assessor
@@ -92,7 +92,9 @@ def overview():
     
     # Get user progress data
     user_data = load_user_progress()
-    user_topics = {topic["topic_id"]: topic for topic in user_data.get("topics", [])}
+    
+    # Map topics by name instead of ID
+    user_topics_by_name = {topic["name"]: topic for topic in user_data.get("topics", [])}
     user_questions = {q["question_id"]: q for q in user_data.get("tutorial_questions", [])}
     
     # Show modules data in debug mode
@@ -112,7 +114,7 @@ def overview():
     if st.session_state.get('debug_mode', False):
         with st.expander("Debug: User Progress"):
             st.write("Raw user data:", user_data)
-            st.write("User topics:", user_topics)
+            st.write("User topics by name:", user_topics_by_name)
             st.write("User questions:", user_questions)
 
     # Display last updated time if available
@@ -131,10 +133,29 @@ def overview():
         st.warning("No modules data available. Please make sure the modules are properly set up in MongoDB.")
         return
     
-    # Process and display modules
-    module_list = modules_data["modules"]
+    # Define the correct order of modules based on micro-competencies.md
+    module_order = [
+        "Introduction to Chemical Engineering",
+        "Graphical Process Diagrams",
+        "Small Kit - Sensors and Valves",
+        "Medium Kit - Unit Operations",
+        "Large Kit - Reactors",
+        "Thermodynamic Cycles"
+    ]
     
-    for module_index, module_info in enumerate(module_list, 1):
+    # Create a mapping of module titles to their data
+    module_map = {module.get("title"): module for module in modules_data["modules"]}
+    
+    # Sort modules according to the defined order
+    sorted_modules = []
+    for title in module_order:
+        if title in module_map:
+            sorted_modules.append(module_map[title])
+        else:
+            st.warning(f"Module '{title}' not found in database")
+    
+    # Display modules in main content area
+    for module_index, module_info in enumerate(sorted_modules, 1):
         module_id = str(module_index)
         module_title = module_info.get("title", f"Module {module_id}")
         
@@ -155,50 +176,43 @@ def overview():
                 }
         else:
             tutorial_questions_dict = tutorial_questions
-            
-        # Get user progress data for this module (or create default)
-        user_module_data = user_topics.get(module_id, {})
-        user_topics_status = user_module_data.get("topics_status", ["🔴"] * len(topics))
-        user_tutorial_progress = user_questions.get(module_id, {})
         
-        # Ensure user_topics_status is at least as long as topics list
-        while len(user_topics_status) < len(topics):
-            user_topics_status.append("🔴")
-        
-        # Calculate completion percentage
+        # Calculate completion percentage - topic progress is now based on names
         total_items = len(topics) + len(tutorial_questions_dict)
-        completed_topics = sum(1 for topic in topics if user_topics.get(f"{module_id}.{topics.index(topic) + 1}", {}).get("status") == "completed")
-        completed_tutorials = sum(1 for q_id in tutorial_questions_dict.keys() if user_questions.get(q_id, {}).get("status") == "completed")
+        completed_topics = 0
+        completed_tutorials = 0
+        
+        # Count completed topics using topic name lookup
+        for topic in topics:
+            topic_name = topic.get('name', topic) if isinstance(topic, dict) else topic
+            topic_data = user_topics_by_name.get(topic_name, {})
+            if topic_data.get("status") == "completed" or topic_data.get("progress", 0) >= 2:
+                completed_topics += 1
+        
+        # Count completed tutorial questions
+        for q_id in tutorial_questions_dict.keys():
+            if user_questions.get(q_id, {}).get("status") == "completed":
+                completed_tutorials += 1
+        
         completed_items = completed_topics + completed_tutorials
         
         module_progress = int((completed_items / total_items) * 2) if total_items > 0 else 0
         module_status = get_status_from_progress(module_progress)
         
-        # Create an expander for each module
-        with st.expander(f"Module {module_index}: {module_title} {get_status_emoji(module_status)}", expanded=module_index == 1):
-            # Create columns for the progress display
-            col1, col2 = st.columns([3, 1])
-            
-            # Display module link in the first column
-            with col1:
-                if st.button(f"Go to Module {module_index} Tutor"):
-                    # Store the file ID in session state
-                    st.session_state[f"module_{module_index}_file_id"] = module_info.get("file_id")
-                    # Store the module number in session state
-                    st.session_state["current_module"] = module_index
-                    # Navigate to the tutor page using relative path
-                    st.switch_page("pages/2_Tutor.py")
-            
-            # Display progress bar in the second column
-            with col2:
-                st.progress(module_progress / 2)
+        # Create an expander for each module (all collapsed by default)
+        with st.expander(f"Module {module_index}: {module_title} {get_status_emoji(module_status)}", expanded=False):
+            # Display progress bar
+            st.progress(module_progress / 2)
             
             # Display topics section
             st.markdown("#### Module Topics")
             if topics:
                 for i, topic in enumerate(topics):
-                    topic_id = f"{module_id}.{i + 1}"
-                    topic_data = user_topics.get(topic_id, {})
+                    # Get topic name based on format
+                    topic_name = topic.get('name', topic) if isinstance(topic, dict) else topic
+                    
+                    # Get topic data by name
+                    topic_data = user_topics_by_name.get(topic_name, {})
                     progress = topic_data.get("progress", 0)
                     status = get_status_from_progress(progress)
                     status_emoji = get_status_emoji(status)
@@ -217,7 +231,6 @@ def overview():
                     
                     with t_col2:
                         # Handle both string and dictionary topic formats
-                        topic_name = topic.get('name', topic) if isinstance(topic, dict) else topic
                         topic_description = topic.get('description', f"Assess your knowledge of {topic_name}") if isinstance(topic, dict) else f"Assess your knowledge of {topic}"
                         
                         # Display topic name with hover description
@@ -255,13 +268,8 @@ def overview():
                         st.markdown(f"<span style='color:{status_color}'>{status_emoji}</span>", unsafe_allow_html=True)
                     
                     with q_col2:
-                        # Create link to assessor with query parameters for the question
-                        assessor_url = f"{BASE_URL}Assessor?module={module_index}&question={question_id}"
-                        st.page_link(
-                            assessor_url, 
-                            label=question_title,
-                            help=f"Attempts: {attempts}"
-                        )
+                        # Display question title without link
+                        st.markdown(question_title)
                     
                     with q_col3:
                         if attempts > 0:

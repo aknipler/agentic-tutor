@@ -1,5 +1,5 @@
 import streamlit as st
-from mongodb.connector import verify_user_login, get_or_create_default_users
+from mongodb.connectors import verify_user_login, get_or_create_default_users
 
 # Initialize session state
 if "logged_in" not in st.session_state:

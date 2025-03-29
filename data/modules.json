@@ -1,0 +1,438 @@
+{ 
+    "_id": { "$oid": "67d1258f86f617ee0dadaa79" },
+    "modules" : 
+    [
+        {
+            "title" : "Introduction to Chemical Engineering",
+            "vector_store_id" : "",
+            "topics" : [
+                {
+                    "name": "Definition of Chemical Engineering",
+                    "description": "Understand chemical engineering as transforming raw materials into products using physical, chemical, and biological processes."
+                },
+                {
+                    "name": "Chemical Engineering Disciplines",
+                    "description": "Identify subfields like process engineering and biochemical engineering."
+                },
+                {
+                    "name": "Role of Chemical Engineers",
+                    "description": "Differentiate between working with new vs. existing technologies. Understand the distinction between consulting work and process engineering as well as other types of chemical engineering roles."
+                },
+                {
+                    "name": "Types of Design in Chemical Engineering",
+                    "description": "Recognize process, control, and mechanical design principles. Can classify different examples of workflow into a relevant category."
+                },
+                {
+                    "name": "Sustainability in Engineering",
+                    "description": "Relate chemical engineering to sustainable development goals. Demonstrate an understanding of sustainable development and the distinction with sustainability."
+                },
+                {
+                    "name": "Pollution Mitigation",
+                    "description": "Understand methods for removing pollution sources, processing waste, and mitigating pollution effects. Understand categories of pollution including atmospheric and waterway, land-use, abiotic resource depletion."
+                },
+                {
+                    "name": "Difference Between Engineering and Chemistry",
+                    "description": "Explain the scale and systems focus in chemical engineering, as distinct from chemistry."
+                },
+                {
+                    "name": "Importance of Energy Balances",
+                    "description": "Appreciate their role in tracking material and energy transformations. A student can demonstrate understanding of the concepts in simple examples and correctly identify inflows and outflows of mass and energy."
+                },
+                {
+                    "name": "Systems Thinking",
+                    "description": "Apply holistic approaches to engineering problems. Students understand the concepts of systems engineering."
+                },
+                {
+                    "name": "Threshold Concepts",
+                    "description": "Identify transformative ideas, such as graphical languages like PFDs and P&IDs."
+                },
+                {
+                    "name": "Sustainable Development Principles",
+                    "description": "Relate chemical engineering practices to the UN SDGs. A student has an understanding of the sustainable development goals."
+                }
+            ],
+            "tutorial_questions" : {
+                "1.1" : {
+                    "question" : "What is Chemical Engineering?",
+                    "expected_answer" : "Chemical engineering is a branch of engineering that applies physical and life sciences to create new products and processes. It involves the design, development, and operation of chemical processes for large-scale production."
+                },
+                "1.2" : {
+                    "question" : "What are the key principles of material balances?",
+                    "expected_answer" : "The key principles of material balances are conservation of mass, accumulation, and steady-state. Material balances are used to quantify the flow of materials in and out of a system."
+                },
+                "1.3" : {
+                    "question" : "What is thermodynamics in chemical processes?",
+                    "expected_answer" : "Thermodynamics is the study of energy and heat transfer in chemical processes. It involves the analysis of energy balances, heat transfer, and phase equilibria in chemical systems."
+                },
+                "1.4" : {
+                    "question" : "What are fluid flow operations?",
+                    "expected_answer" : "Fluid flow operations involve the study of fluid mechanics, flow rates, and pressure drops in chemical processes. It includes the design and operation of pumps, pipes, and valves."
+                },
+                "1.5" : {
+                    "question" : "What is process safety and ethics?",
+                    "expected_answer" : "Process safety and ethics involve the study of safety regulations, risk assessment, and ethical considerations in chemical engineering. It includes the design and operation of processes to ensure the safety of workers and the environment."
+                }
+            }
+        },
+        {
+            "title": "Graphical Process Diagrams",
+            "vector_store_id": "",
+            "topics": [
+                {
+                    "name": "Block Flow Diagrams (BFDs)",
+                    "description": "Use BFDs for early-stage process visualization. The student understands what is typically (and not typically) represented on a BFD."
+                },
+                {
+                    "name": "Process Flow Diagrams (PFDs)",
+                    "description": "Understand intermediate process layouts with key equipment and stream conditions. The student understands what is typically (and not typically) represented on a PFD."
+                },
+                {
+                    "name": "Piping & Instrumentation Diagrams (P&IDs)",
+                    "description": "Design detailed schematics for plant equipment, piping, and control systems."
+                },
+                {
+                    "name": "Control Loop Basics",
+                    "description": "Define controlled variables, set points, and manipulated variables."
+                },
+                {
+                    "name": "Direct vs. Indirect Control",
+                    "description": "Differentiate between directly measured variables and indirectly measured parameters."
+                },
+                {
+                    "name": "Control Strategies: Cascade Control",
+                    "description": "The student understands what cascade control is, when it would be used and can give viable examples."
+                },
+                {
+                    "name": "Control Strategy: Ratio control",
+                    "description": "The student understands what ratio control is, when it would be used and can give viable examples."
+                },
+                {
+                    "name": "Safety Systems in P&IDs",
+                    "description": "Incorporate alarms, trips, and interlocks in process designs. The student demonstrates understanding of these, can articulate when they would be used and can provide viable examples."
+                },
+                {
+                    "name": "P&ID Revision Processes",
+                    "description": "Understand the iterative process of P&ID development and review and processes such as sign-off."
+                }
+            ],
+            "tutorial_questions" : {
+                "2.1" : {
+                    "question" : "What is heat transfer in chemical processes?",
+                    "expected_answer" : "Heat transfer in chemical processes involves the transfer of heat between systems and surroundings. It includes the analysis of heat exchangers, heat conduction, and heat transfer coefficients in chemical systems."
+                },
+                "2.2": {
+                    "question": "What are the key principles of mass transfer?",
+                    "expected_answer": "The key principles of mass transfer are diffusion, convection, and interfacial mass transfer. Mass transfer involves the transfer of mass between phases in chemical processes."
+                },
+                "2.3": {
+                    "question": "What are the key principles of separation processes?",
+                    "expected_answer": "The key principles of separation processes are distillation, absorption, and extraction. Separation processes involve the separation of components in a mixture based on their physical or chemical properties."
+                },
+                "2.4": {
+                    "question": "What is distillation column design?",
+                    "expected_answer": "Distillation column design involves the design and operation of distillation columns to separate components in a mixture based on their boiling points. It includes the selection of column internals, operating conditions, and reflux ratios."
+                }
+            }
+        },
+        {
+            "title": "Small Kit - Sensors and Valves",
+            "vector_store_id": "",
+            "topics": [
+                {
+                    "name": "Thermocouple Function",
+                    "description": "Explain temperature measurement using the thermoelectric effect."
+                },
+                {
+                    "name": "Resistance Thermometers",
+                    "description": "Understand resistance changes in response to temperature."
+                },
+                {
+                    "name": "Bimetallic Thermometers",
+                    "description": "Describe their role in temperature measurement and control."
+                },
+                {
+                    "name": "Gauge Pressure in Systems",
+                    "description": "Differentiate between gauge and absolute pressure readings in typical engineering applications."
+                },
+                {
+                    "name": "Differential Pressure Applications",
+                    "description": "Design systems where differential pressure monitoring optimizes operation (e.g., filtration or flow systems)."
+                },
+                {
+                    "name": "Valve Selection",
+                    "description": "Match valve types (e.g., gate, ball, butterfly) to specific process requirements."
+                },
+                {
+                    "name": "Valve Failure Modes",
+                    "description": "Evaluate fail-open, fail-closed, and fail-last-position designs for system safety."
+                },
+                {
+                    "name": "Valve Actuation Mechanisms",
+                    "description": "Explain the differences between pneumatic, electric, and manual valve actuators."
+                },
+                {
+                    "name": "Safety Valve Design",
+                    "description": "Specify pressure safety valves and rupture disks for overpressure protection."
+                },
+                {
+                    "name": "Thermocouple Applications",
+                    "description": "Select appropriate thermocouples based on operating temperature ranges."
+                },
+                {
+                    "name": "Bimetallic Thermometers in Control",
+                    "description": "Identify applications where bimetallic thermometers provide cost-effective solutions."
+                }
+            ],
+            "tutorial_questions": {
+                "3.1": {
+                    "question": "What is reaction kinetics?",
+                    "expected_answer": "Reaction kinetics is the study of the rates of chemical reactions and the factors that influence them. It involves the analysis of reaction mechanisms, rate laws, and reaction rates in chemical processes."
+                },
+                "3.2": {
+                    "question": "What are the key principles of reactor design?",
+                    "expected_answer": "The key principles of reactor design are residence time, conversion, and selectivity. Reactor design involves the design and operation of reactors to optimize the production of desired products in chemical processes."
+                },
+                "3.3": {
+                    "question": "What is catalysis in chemical processes?",
+                    "expected_answer": "Catalysis in chemical processes involves the use of catalysts to increase the rates of chemical reactions. It includes the design and operation of catalytic reactors to improve the efficiency of chemical processes."
+                },
+                "3.4": {
+                    "question": "What are biochemical reactor systems?",
+                    "expected_answer": "Biochemical reactor systems involve the study of biological processes in chemical engineering. It includes the design and operation of bioreactors to produce biofuels, pharmaceuticals, and other bioproducts."
+                }
+            }
+        },
+        {
+            "title": "Medium Kit - Unit Operations",
+            "vector_store_id": "",
+            "topics": [
+                {
+                    "name": "Tank Suction Design",
+                    "description": "Calculate suction head and evaluate its impact on pump performance."
+                },
+                {
+                    "name": "Tank Level Sensors",
+                    "description": "Select and implement appropriate level measurement sensors for storage tanks."
+                },
+                {
+                    "name": "3-Phase Separator Design Principles",
+                    "description": "Understand separation based on density differences (oil, water, and gas)."
+                },
+                {
+                    "name": "Flow Behavior in Separators",
+                    "description": "Analyze flow dynamics affecting separation efficiency (e.g., settling times, turbulence)."
+                },
+                {
+                    "name": "Heat Exchanger Fundamentals",
+                    "description": "Explain conduction and convection in heat transfer across exchanger surfaces."
+                },
+                {
+                    "name": "Heat Exchanger Effectiveness (NTU Method)",
+                    "description": "Calculate exchanger performance using NTU and effectiveness."
+                },
+                {
+                    "name": "Fouling Factors",
+                    "description": "Assess fouling and its impact on heat transfer efficiency."
+                },
+                {
+                    "name": "Heat Exchanger Design",
+                    "description": "Specify materials and geometries for different heat exchanger types (e.g., shell-and-tube, plate)."
+                },
+                {
+                    "name": "Boiler Operations",
+                    "description": "Describe how steam generation in boilers converts heat into mechanical work or power."
+                },
+                {
+                    "name": "Static Pressure in Boilers",
+                    "description": "Calculate pressure effects on boiling point and steam quality."
+                },
+                {
+                    "name": "Operator Training Simulations",
+                    "description": "Identify key control challenges in 3-phase separator systems."
+                },
+                {
+                    "name": "Heat Exchanger Practical",
+                    "description": "Develop methods to design, build, and test heat exchangers."
+                },
+                {
+                    "name": "Energy Efficiency in Exchangers",
+                    "description": "Design systems to optimize heat recovery and reduce energy losses."
+                },
+                {
+                    "name": "Flow Control in Heat Exchangers",
+                    "description": "Use flow rates to control outlet temperatures effectively."
+                }
+            ],
+            "tutorial_questions": {
+                "4.1": {
+                    "question": "What is process control and instrumentation?",
+                    "expected_answer": "Process control and instrumentation involve the design and operation of control systems to regulate process variables in chemical processes. It includes the use of sensors, actuators, and control algorithms to maintain process conditions within desired limits."
+                },
+                "4.2": {
+                    "question": "What is PID controller design?",
+                    "expected_answer": "PID controller design involves the design and tuning of proportional-integral-derivative controllers to regulate process variables. It includes the selection of controller parameters, tuning methods, and control strategies."
+                },
+                "4.3": {
+                    "question": "What is dynamic process modeling?",
+                    "expected_answer": "Dynamic process modeling involves the development of mathematical models to simulate the behavior of chemical processes. It includes the analysis of process dynamics, stability, and control in chemical systems."
+                },
+                "4.4": {
+                    "question": "What are advanced control strategies?",
+                    "expected_answer": "Advanced control strategies involve the use of model predictive control, adaptive control, and fuzzy logic control in chemical processes. It includes the design and implementation of advanced control algorithms to improve process performance."
+                }
+            }
+        },
+        {
+            "title": "Large Kit - Reactors",
+            "vector_store_id": "",
+            "topics": [
+                {
+                    "name": "Reaction Rate Laws",
+                    "description": "Derive rate laws for zero, first, and second-order reactions."
+                },
+                {
+                    "name": "Effect of Temperature on Kinetics",
+                    "description": "Apply the Arrhenius equation to calculate rate constants."
+                },
+                {
+                    "name": "Catalysis in Reaction Kinetics",
+                    "description": "Analyze the role of catalysts in enhancing reaction rates."
+                },
+                {
+                    "name": "Batch Reactor Design",
+                    "description": "Optimize time-dependent production in batch reactors."
+                },
+                {
+                    "name": "Continuous Stirred Tank Reactor (CSTR)",
+                    "description": "Design systems for steady-state reactions."
+                },
+                {
+                    "name": "Plug Flow Reactor (PFR)",
+                    "description": "Analyze concentration gradients along the reactor length."
+                },
+                {
+                    "name": "Reactor Scale-Up Principles",
+                    "description": "Scale lab-scale reactions to industrial reactor sizes."
+                },
+                {
+                    "name": "Energy Balances in Reactors",
+                    "description": "Apply energy balance equations to monitor heat effects during reactions."
+                },
+                {
+                    "name": "Exothermic and Endothermic Reactions",
+                    "description": "Design safety systems for reactions with significant heat release or absorption."
+                },
+                {
+                    "name": "Multiple Reaction Systems",
+                    "description": "Optimize competing reactions to maximize desired product yield."
+                },
+                {
+                    "name": "Reaction Mechanisms",
+                    "description": "Distinguish between elementary and complex reaction steps."
+                },
+                {
+                    "name": "HYSYS in Reactor Modeling",
+                    "description": "Simulate complex reaction kinetics and optimize reactor performance using HYSYS."
+                },
+                {
+                    "name": "Residence Time Distribution (RTD)",
+                    "description": "Evaluate RTD to diagnose reactor performance."
+                },
+                {
+                    "name": "Heat Transfer in Reactors",
+                    "description": "Design heating or cooling systems for optimal reaction conditions."
+                },
+                {
+                    "name": "Reactor Safety",
+                    "description": "Implement pressure relief, thermal runaway controls, and emergency shutdown systems."
+                }
+            ],
+            "tutorial_questions": {
+                "5.1": {
+                    "question": "What is process design and simulation?",
+                    "expected_answer": "Process design and simulation involve the design and analysis of chemical processes using computer-aided tools. It includes the development of process flow diagrams, heat and material balances, and equipment specifications."
+                },
+                "5.2": {
+                    "question": "What is equipment sizing and selection?",
+                    "expected_answer": "Equipment sizing and selection involve the selection of equipment and materials for chemical processes. It includes the design and specification of equipment based on process requirements, safety standards, and cost considerations."
+                },
+                "5.3": {
+                    "question": "What is process optimization?",
+                    "expected_answer": "Process optimization involves the use of mathematical models and optimization algorithms to improve process performance. It includes the analysis of process variables, constraints, and objectives to optimize process operations."
+                },
+                "5.4": {
+                    "question": "What is sustainable process engineering?",
+                    "expected_answer": "Sustainable process engineering involves the design and operation of processes to minimize environmental impact and resource consumption. It includes the use of renewable energy, waste minimization, and green chemistry principles in chemical processes."
+                }
+            }
+        },
+        {
+            "title": "Thermodynamic Cycles",
+            "vector_store_id": "",
+            "topics": [
+                {
+                    "name": "Work and Heat in Cycles",
+                    "description": "Distinguish between work done and heat transferred in thermodynamic systems."
+                },
+                {
+                    "name": "Cycle Efficiency Calculations",
+                    "description": "Use thermodynamic efficiency equations for practical systems."
+                },
+                {
+                    "name": "Carnot Cycle",
+                    "description": "Explain the theoretical limits of efficiency and its relevance to practical systems."
+                },
+                {
+                    "name": "Isochoric Processes",
+                    "description": "Evaluate systems where volume remains constant."
+                },
+                {
+                    "name": "Isothermal Processes",
+                    "description": "Analyze systems with constant temperature transformations."
+                },
+                {
+                    "name": "Isobaric Processes",
+                    "description": "Solve problems involving constant pressure changes in cycles."
+                },
+                {
+                    "name": "Adiabatic Processes",
+                    "description": "Calculate conditions where no heat is exchanged with surroundings."
+                },
+                {
+                    "name": "Heat Pumps",
+                    "description": "Explain the principles behind refrigeration and heat pump systems."
+                },
+                {
+                    "name": "Entropy Changes",
+                    "description": "Apply entropy equations to assess system irreversibilities."
+                },
+                {
+                    "name": "HYSYS for Thermodynamic Simulations",
+                    "description": "Use HYSYS to simulate and optimize thermodynamic cycles."
+                },
+                {
+                    "name": "Real vs. Ideal Cycles",
+                    "description": "Compare real systems with idealized cycles to identify inefficiencies."
+                },
+                {
+                    "name": "Steam Turbine Performance",
+                    "description": "Evaluate energy output from steam turbines in thermodynamic cycles."
+                },
+                {
+                    "name": "Heat Exchangers in Cycles",
+                    "description": "Design exchangers for optimal heat recovery in thermodynamic systems."
+                },
+                {
+                    "name": "Fluid Properties in Cycles",
+                    "description": "Calculate specific heat, enthalpy, and entropy for working fluids."
+                }
+            ],
+            "tutorial_questions": {
+                "6.1": {
+                    "question": "What are the principles of thermodynamic cycles?",
+                    "expected_answer": "Thermodynamic cycles involve the conversion of heat into work through a series of processes. Understanding these cycles is crucial for designing efficient power generation and refrigeration systems."
+                }
+            }
+        }
+    ]
+}
