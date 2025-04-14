@@ -10,7 +10,7 @@
       "properties": {
         "correctness": {
           "type": "boolean",
-          "description": "Indicates if the answer is correct (true) or not (false)"
+          "description": "Indicates if the answer is correct (true) or not (false). Be fairly lenient, as the answer can be correct even if it's not exactly the same as the expected answer."
         }
       },
       "additionalProperties": false

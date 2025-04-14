@@ -78,10 +78,10 @@ def get_user_progress(user_id="user123"):
             st.error("Error retrieving user progress")
         return {"user_id": user_id, "modules": {}}
 
-def update_user_progress(user_id, module_id, topic_id=None, question_id=None, progress=None, status=None):
+def update_user_progress(user_id, module_id, topic_id=None, question_id=None, progress=None, status=None, attempts=None):
     """
     Update user progress in MongoDB using the user_module_progress collection.
-    The data structure has topics and questions stored as arrays.
+    The data structure has topics and questions stored in nested objects.
     
     Args:
         user_id (str): The ID of the user.
@@ -90,142 +90,104 @@ def update_user_progress(user_id, module_id, topic_id=None, question_id=None, pr
         question_id (str, optional): The ID of the question to update.
         progress (int, optional): The new progress value (0=not started, 1=in progress, 2=completed).
         status (str, optional): The new status to set.
+        attempts (int, optional): The number of attempts to set for a question.
         
     Returns:
         bool: True if the update was successful, False otherwise.
     """
     try:
+        print(f"[DEBUG] update_user_progress called - User: {user_id}, Module: {module_id}")
+        print(f"[DEBUG] Topic: {topic_id}, Question: {question_id}")
+        print(f"[DEBUG] Progress: {progress}, Status: {status}, Attempts: {attempts}")
+        
         client = get_mongo_client()
         db = client["funce_db"]
         user_progress_collection = db["user_module_progress"]
         
-        # Check if document exists for this user and module
-        doc = user_progress_collection.find_one({
-            "user_id": user_id,
-            "module_id": module_id
-        })
+        # Check if document exists for this user
+        doc = user_progress_collection.find_one({"user_id": user_id})
+        print(f"[DEBUG] Found existing user document: {bool(doc)}")
         
         if not doc:
-            print(f"[Error] No document found for user {user_id} and module {module_id}")
-            return False
+            print(f"[DEBUG] Creating new user document for {user_id}")
+            # Create new user document with default structure
+            doc = {
+                "user_id": user_id,
+                "created_at": datetime.now(),
+                "updated_at": datetime.now(),
+                "modules": {}
+            }
+            user_progress_collection.insert_one(doc)
+        
+        # Ensure the module exists in the user's document
+        if module_id not in doc.get("modules", {}):
+            print(f"[DEBUG] Initializing module {module_id} for user {user_id}")
+            update_result = user_progress_collection.update_one(
+                {"user_id": user_id},
+                {
+                    "$set": {
+                        f"modules.{module_id}": {
+                            "progress": 0,
+                            "status": "not_started",
+                            "topics": {},
+                            "questions": {}
+                        }
+                    }
+                }
+            )
             
         if topic_id is not None:
             # Set status based on progress if not explicitly provided
             if status is None and progress is not None:
                 status = ["not_started", "in_progress", "completed"][progress]
             
-            # Try to find and update existing topic
-            result = user_progress_collection.update_one(
-                {
-                    "user_id": user_id,
-                    "module_id": module_id,
-                    "topics": {
-                        "$elemMatch": {
-                            "topic_id": topic_id
-                        }
-                    }
-                },
+            # Update the specific topic within the module
+            update_result = user_progress_collection.update_one(
+                {"user_id": user_id},
                 {
                     "$set": {
-                        "topics.$.progress": progress,
-                        "topics.$.status": status,
-                        "last_updated": datetime.now()
+                        f"modules.{module_id}.topics.{topic_id}": {
+                            "progress": progress if progress is not None else 0,
+                            "status": status if status is not None else "not_started",
+                            "last_updated": datetime.now()
+                        },
+                        "updated_at": datetime.now()
                     }
                 }
             )
             
-            if result.matched_count == 0:
-                # Topic not found, add new topic to array
-                modules_data = get_cached_modules_data()
-                
-                # Find topic name from modules data
-                topic_name = None
-                for module in modules_data.get("modules", []):
-                    if str(modules_data["modules"].index(module) + 1) == module_id:
-                        for topic in module.get("topics", []):
-                            if isinstance(topic, dict) and topic.get("topic_id") == topic_id:
-                                topic_name = topic.get("name")
-                                break
-                        break
-                
-                if not topic_name:
-                    print(f"[Error] Could not find topic name for topic_id {topic_id}")
-                    return False
-                
-                result = user_progress_collection.update_one(
-                    {
-                        "user_id": user_id,
-                        "module_id": module_id
-                    },
-                    {
-                        "$push": {
-                            "topics": {
-                                "topic_id": topic_id,
-                                "name": topic_name,
-                                "progress": progress if progress is not None else 0,
-                                "status": status if status is not None else "not_started"
-                            }
-                        },
-                        "$set": {
-                            "last_updated": datetime.now()
-                        }
-                    }
-                )
-            
-            return result.modified_count > 0
+            return update_result.modified_count > 0
             
         if question_id is not None:
+            print(f"[DEBUG] Updating question {question_id} in module {module_id}")
             # Set status based on progress if not explicitly provided
             if status is None and progress is not None:
                 status = ["not_started", "in_progress", "completed"][progress]
+                print(f"[DEBUG] Derived status from progress: {status}")
             
-            # Try to find and update existing question
-            result = user_progress_collection.update_one(
-                {
-                    "user_id": user_id,
-                    "module_id": module_id,
-                    "tutorial_questions": {
-                        "$elemMatch": {
-                            "question_id": question_id
-                        }
-                    }
-                },
-                {
-                    "$set": {
-                        "tutorial_questions.$.progress": progress,
-                        "tutorial_questions.$.status": status,
-                        "tutorial_questions.$.last_attempt": datetime.now()
-                    },
-                    "$inc": {
-                        "tutorial_questions.$.attempts": 1
-                    }
-                }
+            # Get current attempts count if not provided
+            current_attempts = attempts
+            if current_attempts is None and module_id in doc.get("modules", {}):
+                question_data = doc["modules"][module_id].get("questions", {}).get(question_id, {})
+                current_attempts = question_data.get("attempts", 0) + 1
+                print(f"[DEBUG] Calculated attempts: {current_attempts}")
+            
+            # Update the specific question within the module
+            update_data = {
+                f"modules.{module_id}.questions.{question_id}.status": status if status is not None else "not_started",
+                f"modules.{module_id}.questions.{question_id}.last_attempt": datetime.now(),
+                f"modules.{module_id}.questions.{question_id}.attempts": current_attempts,
+                "updated_at": datetime.now()
+            }
+            print(f"[DEBUG] Question update data: {update_data}")
+            
+            update_result = user_progress_collection.update_one(
+                {"user_id": user_id},
+                {"$set": update_data}
             )
+            print(f"[DEBUG] Question update result - Modified count: {update_result.modified_count}")
             
-            if result.matched_count == 0:
-                # Question not found, add new question to array
-                result = user_progress_collection.update_one(
-                    {
-                        "user_id": user_id,
-                        "module_id": module_id
-                    },
-                    {
-                        "$push": {
-                            "tutorial_questions": {
-                                "question_id": question_id,
-                                "progress": progress if progress is not None else 0,
-                                "status": status if status is not None else "not_started",
-                                "last_attempt": datetime.now(),
-                                "attempts": 1
-                            }
-                        },
-                        "$set": {
-                            "last_updated": datetime.now()
-                        }
-                    }
-                )
-            
-            return result.modified_count > 0
+            return update_result.modified_count > 0
         
         return False
         
@@ -460,50 +422,58 @@ def batch_update_user_progress(user_id: str, updates: List[Dict[str, Any]]) -> b
         
         # Process updates by module
         for module_id, module_updates_list in module_updates.items():
-            update_data = {
+            # First, get the current user document to get current values
+            user_doc = user_progress_collection.find_one({"user_id": user_id})
+            if not user_doc:
+                print(f"[Error] No document found for user {user_id}")
+                return False
+                
+            # Prepare update data
+            set_data = {
                 "last_updated": datetime.now()
             }
-            array_filters = []
             
             # Collect all updates for this module
             for update in module_updates_list:
                 if "topic_id" in update:
                     topic_id = update["topic_id"]
                     if "progress" in update:
-                        update_data[f"topics.$[topic_{topic_id}].progress"] = update["progress"]
+                        set_data[f"modules.{module_id}.topics.{topic_id}.progress"] = update["progress"]
                         if "status" not in update:
-                            update_data[f"topics.$[topic_{topic_id}].status"] = ["not_started", "in_progress", "completed"][update["progress"]]
+                            set_data[f"modules.{module_id}.topics.{topic_id}.status"] = ["not_started", "in_progress", "completed"][update["progress"]]
                     if "status" in update:
-                        update_data[f"topics.$[topic_{topic_id}].status"] = update["status"]
-                    array_filters.append({f"topic_{topic_id}.topic_id": topic_id})
+                        set_data[f"modules.{module_id}.topics.{topic_id}.status"] = update["status"]
                 
                 if "question_id" in update:
                     question_id = update["question_id"]
                     if "progress" in update:
-                        update_data[f"tutorial_questions.$[question_{question_id}].progress"] = update["progress"]
+                        set_data[f"modules.{module_id}.questions.{question_id}.progress"] = update["progress"]
                         if "status" not in update:
-                            update_data[f"tutorial_questions.$[question_{question_id}].status"] = ["not_started", "in_progress", "completed"][update["progress"]]
+                            set_data[f"modules.{module_id}.questions.{question_id}.status"] = ["not_started", "in_progress", "completed"][update["progress"]]
                     if "status" in update:
-                        update_data[f"tutorial_questions.$[question_{question_id}].status"] = update["status"]
-                    update_data[f"tutorial_questions.$[question_{question_id}].last_attempt"] = datetime.now()
-                    update_data[f"tutorial_questions.$[question_{question_id}].attempts"] = {"$inc": 1}
-                    array_filters.append({f"question_{question_id}.question_id": question_id})
+                        set_data[f"modules.{module_id}.questions.{question_id}.status"] = update["status"]
+                    set_data[f"modules.{module_id}.questions.{question_id}.last_attempt"] = datetime.now()
+                    
+                    # Get current attempts count
+                    current_attempts = 0
+                    if module_id in user_doc.get("modules", {}):
+                        question_data = user_doc["modules"][module_id].get("questions", {}).get(question_id, {})
+                        current_attempts = question_data.get("attempts", 0)
+                    
+                    # Set the incremented value
+                    set_data[f"modules.{module_id}.questions.{question_id}.attempts"] = current_attempts + 1
             
-            if update_data:
-                user_progress_collection.update_one(
+            # Execute the update
+            if set_data:
+                update_result = user_progress_collection.update_one(
                     {"user_id": user_id},
-                    {"$set": update_data},
-                    array_filters=array_filters
+                    {"$set": set_data}
                 )
-        
-        if st.session_state.get('debug_mode', False):
-            st.write(f"Debug: Batch updated progress for user {user_id}")
-        return True
+                return update_result.modified_count > 0
+            
+            return False
     except Exception as e:
-        if st.session_state.get('debug_mode', False):
-            st.error(f"Debug: Error in batch_update_user_progress: {str(e)}")
-        else:
-            st.error("Error updating user progress")
+        print(f"[Error] Exception in batch_update_user_progress: {str(e)}")
         return False
 
 def create_user(user_id: str) -> bool:
@@ -554,7 +524,6 @@ def create_user(user_id: str) -> bool:
         
         # Initialize modules with default values
         for module in modules_list:
-            # Use the module's explicit index field
             module_id = str(module.get("index", 0))
             default_data["modules"][module_id] = {
                 "progress": 0,
@@ -571,14 +540,21 @@ def create_user(user_id: str) -> bool:
                     "status": "not_started"
                 }
             
-            # Initialize questions - handle both dict and list formats
+            # Initialize questions with assessment fields
             tutorial_questions = module.get("tutorial_questions", [])
             for idx, _ in enumerate(tutorial_questions):
                 question_id = str(idx + 1)
                 default_data["modules"][module_id]["questions"][question_id] = {
+                    # Basic progress fields
                     "status": "not_started",
                     "attempts": 0,
-                    "last_attempt": None
+                    "last_attempt": None,
+                    # Assessment fields
+                    "competency_level": 0,
+                    "feedback": "",
+                    "response_text": "",
+                    "input_image_data": [],
+                    "last_assessed": None
                 }
         
         # Insert default progress data

@@ -744,6 +744,9 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
                                 # Create link to assessor with query parameters
                                 assessor_url = f"{BASE_URL}Assessor?module={module_id}&question={question_id}"
                                 if st.button("Try Question", key=f"try_question_{question_id}", help=f"Attempts: {attempts}"):
+                                    # Store the module and question IDs in session state
+                                    st.session_state.selected_module_id = module_id
+                                    st.session_state.selected_question_id = question_id
                                     st.switch_page("pages/8_Assessor.py")
                             
                             with col2:
