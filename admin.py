@@ -6,10 +6,11 @@ import pandas as pd
 from typing import List, Dict
 import json
 from openai import OpenAI
-from openai.types.beta.assistant import Assistant
 from openai.types.vector_store import VectorStore
 import tempfile
 from mongodb.connectors import get_modules_data, get_mongo_client
+from mongodb.connectors.user_progress import create_user, list_users, delete_user, get_user_progress_details
+
 
 # Set page config
 st.set_page_config(
@@ -34,6 +35,33 @@ def get_vector_store_info(store: VectorStore) -> Dict:
         "created_at": datetime.fromtimestamp(store.created_at).strftime('%Y-%m-%d %H:%M:%S'),
         "metadata": store.metadata or {}
     }
+
+def view_user_progress():
+    """Display user progress information."""
+    st.header("User Progress Overview")
+    
+    try:
+        users = list_users()
+        if users:
+            df = pd.DataFrame(users)
+            st.dataframe(df)
+            
+            # User progress details
+            st.subheader("User Progress Details")
+            user_to_view = st.selectbox("Select user to view progress", [u["user_id"] for u in users], key="progress_view")
+            if st.button("View Progress Details"):
+                try:
+                    user_progress = get_user_progress_details(user_to_view)
+                    if user_progress:
+                        st.json(user_progress)
+                    else:
+                        st.error(f"No progress data found for user '{user_to_view}'.")
+                except Exception as e:
+                    st.error(f"Error viewing user progress: {str(e)}")
+        else:
+            st.info("No users found in the system.")
+    except Exception as e:
+        st.error(f"Error fetching user data: {str(e)}")
 
 def update_module_vector_store(module_title: str, vector_store_id: str) -> bool:
     """Update a module's vector store ID in MongoDB."""
@@ -71,8 +99,18 @@ def main():
 
     st.title("Admin Dashboard")
     
+    # Add a sidebar for navigation
+    st.sidebar.title("Navigation")
+    page = st.sidebar.radio("Go to", ["User Progress", "Database Maintenance"])
+    
+    if page == "User Progress":
+        view_user_progress()
+    elif page == "Database Maintenance":
+        st.subheader("Database Maintenance")
+        st.info("Database maintenance features have been moved to a separate admin tool.")
+
     # Create tabs for different sections
-    tab1, tab2, tab3 = st.tabs(["Vector Store Management", "Module-Vector Store Management", "Assistant Management"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Vector Store Management", "Module-Vector Store Management", "Assistant Management", "User Management"])
     
     with tab1:
         st.header("Vector Store Management")
@@ -406,6 +444,63 @@ def main():
                     st.error(f"Error creating assistant: {str(e)}")
             else:
                 st.warning("Please enter a name for the assistant.")
+
+    with tab4:
+        st.header("User Management")
+        
+        # User listing section
+        st.subheader("Existing Users")
+        try:
+            users = list_users()
+            if users:
+                df = pd.DataFrame(users)
+                st.dataframe(df)
+                
+                # User deletion
+                user_to_delete = st.selectbox("Select user to delete", [u["user_id"] for u in users])
+                if st.button("Delete Selected User"):
+                    try:
+                        if delete_user(user_to_delete):
+                            st.success(f"User '{user_to_delete}' deleted successfully!")
+                            st.rerun()
+                        else:
+                            st.error(f"Failed to delete user '{user_to_delete}'.")
+                    except Exception as e:
+                        st.error(f"Error deleting user: {str(e)}")
+                
+                # User progress details
+                st.subheader("User Progress Details")
+                user_to_view = st.selectbox("Select user to view progress", [u["user_id"] for u in users])
+                if st.button("View User Progress"):
+                    try:
+                        user_progress = get_user_progress_details(user_to_view)
+                        if user_progress:
+                            st.json(user_progress)
+                        else:
+                            st.error(f"No progress data found for user '{user_to_view}'.")
+                    except Exception as e:
+                        st.error(f"Error viewing user progress: {str(e)}")
+            else:
+                st.info("No users found.")
+        except Exception as e:
+            st.error(f"Error fetching users: {str(e)}")
+        
+        # User creation section
+        st.subheader("Create New User")
+        new_user_id = st.text_input("Enter user ID")
+        
+        if st.button("Create User"):
+            if new_user_id:
+                try:
+                    if create_user(new_user_id):
+                        st.success(f"User '{new_user_id}' created successfully!")
+                        st.rerun()
+                    else:
+                        st.error(f"Failed to create user '{new_user_id}'. User may already exist.")
+                except Exception as e:
+                    st.error(f"Error creating user: {str(e)}")
+            else:
+                st.warning("Please enter a user ID.")
 
 if __name__ == "__main__":
     main() 

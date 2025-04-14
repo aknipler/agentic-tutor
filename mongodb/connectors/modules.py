@@ -1,13 +1,24 @@
 import streamlit as st
 from .base import get_mongo_client
 
+def get_cached_modules_data():
+    """Get modules data from cache or fetch if not available"""
+    if "cached_modules_data" not in st.session_state:
+        st.session_state.cached_modules_data = get_modules_data()
+    return st.session_state.cached_modules_data
+
 def get_modules_data():
     """
-    Retrieve all modules data from MongoDB.
+    Retrieve all modules data from MongoDB with efficient caching.
     
     Returns:
         dict: A dictionary containing all modules data.
     """
+    # Check session state cache first
+    if "cached_modules_data" in st.session_state:
+        return st.session_state.cached_modules_data
+        
+    print("[get_modules_data] Retrieving modules data")  # Only logs on actual DB fetch
     try:
         client = get_mongo_client()
         db = client["funce_db"]
@@ -74,23 +85,19 @@ def get_modules_data():
             # Insert sample data
             modules_collection.insert_one(sample_modules)
             st.info("Initialized modules database with sample data")
-            modules_data = sample_modules
+            modules_data = [sample_modules]
         
         # Ensure the data has the correct structure
-        if "modules" not in modules_data:
-            # If modules_data is a list, wrap it in a modules key
-            if isinstance(modules_data, list):
-                modules_data = {"modules": modules_data}
-            else:
-                st.error("Modules data does not have the expected structure.")
-                return {"modules": []}
-        
-        if st.session_state.get('debug_mode', False):
-            st.write("Debug: Retrieved modules data:", modules_data)  # Debug log
+        if isinstance(modules_data, list):
+            modules_data = {"modules": modules_data}
+            
+        # Cache in session state
+        st.session_state.cached_modules_data = modules_data
         return modules_data
+        
     except Exception as e:
         if st.session_state.get('debug_mode', False):
-            st.error(f"Debug: Error in get_modules_data: {str(e)}")  # Debug log
+            st.error(f"Debug: Error in get_modules_data: {str(e)}")
         else:
             st.error("Error retrieving modules data")
         return {"modules": []}

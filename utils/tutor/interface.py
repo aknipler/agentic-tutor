@@ -2,11 +2,12 @@
 import streamlit as st
 import openai
 import json
-from typing import Optional, Dict, Any, Union, List
+from typing import Optional, Dict, Any, Union, List, Tuple
 from datetime import datetime
 
 from .config.settings import TutorConfig, MODULE_TITLES
 from .models.chat import ChatMessage
+from .state import TutorState
 from .handlers.competency import (
     handle_competency_update,
     handle_competency_check,
@@ -14,10 +15,43 @@ from .handlers.competency import (
     get_next_non_competent_topic
 )
 from .ui.components import render_sidebar, render_chat_history, render_progress_summary
-from mongodb.connectors import get_modules_data, get_user_progress
+from mongodb.connectors import get_modules_data, get_user_progress, update_competency
+from utils.cache import get_cached_modules_data, invalidate_modules_cache
 
 # Base URL for the application
 BASE_URL = "http://localhost:8502/"
+
+def invalidate_caches():
+    """Invalidate all cached data when updates occur"""
+    keys_to_clear = [
+        "cached_modules_data",
+        "cached_user_progress",
+        "progress_summary_1",
+        "progress_summary_2",
+        "progress_summary_3",
+        "progress_summary_4",
+        "progress_summary_5",
+        "progress_summary_6"
+    ]
+    for key in keys_to_clear:
+        if key in st.session_state:
+            del st.session_state[key]
+
+def get_cached_modules_data():
+    """Get modules data from cache or fetch if not available"""
+    from mongodb.connectors import get_modules_data
+    return get_modules_data()  # Now uses internal caching
+
+def invalidate_modules_cache():
+    """Invalidate the modules cache when data needs to be refreshed"""
+    if "cached_modules_data" in st.session_state:
+        del st.session_state.cached_modules_data
+
+def get_cached_user_progress():
+    """Get user progress from cache or fetch if not available"""
+    if "cached_user_progress" not in st.session_state:
+        st.session_state.cached_user_progress = get_user_progress(st.session_state.user_id)
+    return st.session_state.cached_user_progress
 
 def load_tutor_prompt() -> str:
     """Load the tutor prompt from the tutor.md file"""
@@ -51,186 +85,412 @@ def clean_file_id(file_id: Optional[str]) -> Optional[str]:
 
 def handle_function_call(tool_call: Dict[str, Any], user_id: str) -> Optional[str]:
     """Handle function calls from the AI response"""
-    func_name = tool_call.name
-    func_args = json.loads(tool_call.arguments)
-    
+    func_name = tool_call["name"]
+    func_args = tool_call["arguments"]  # Already parsed JSON from streaming
+    print(f"[Function Call] Received function call: {func_name} with arguments: {func_args}")
     if func_name == "update_topic_competency":
         return handle_competency_update(func_args, user_id)
     elif func_name == "get_topic_competency":
         return handle_competency_check(func_args, user_id)
     return None
 
-def get_bot_response(user_input: str, module: Union[str, int], file_id: Optional[str] = None) -> str:
+def handle_topic_transition() -> Optional[str]:
+    """Handle topic transition state and return a message if in transition"""
+    if st.session_state.get("in_topic_transition", False):
+        transition_time = st.session_state.get("topic_transition_time", 0)
+        current_time = datetime.now().timestamp()
+        if current_time - transition_time < 5:
+            print("[Topic Transition] Recent transition detected, skipping processing")
+            return "Processing topic transition, please wait..."
+        else:
+            print("[Topic Transition] Old transition detected, clearing state")
+            st.session_state["in_topic_transition"] = False
+            if "topic_transition_time" in st.session_state:
+                del st.session_state["topic_transition_time"]
+    return None
+
+def prepare_tools_configuration(module: Union[str, int]) -> List[Dict[str, Any]]:
+    """Prepare the tools configuration for the AI response"""
+    tools = [
+        {
+            "type": "function",
+            "name": "update_topic_competency",
+            "description": "Update a student's competency level for a specific topic",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "topic_name": {
+                        "type": "string",
+                        "description": "The name of the topic to update"
+                    },
+                    "level": {
+                        "type": "integer",
+                        "description": "Competency level (0=not started, 1=in progress, 2=completed)",
+                        "enum": [0, 1, 2]
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Brief explanation for the competency update"
+                    }
+                },
+                "required": ["topic_name", "level", "reason"]
+            }
+        }
+    ]
+
+    vector_store_key = f"vector_store_id_{module}"
+    if vector_store_key in st.session_state:
+        vector_store_id = st.session_state[vector_store_key]
+        if vector_store_id:
+            tools.append({
+                "type": "file_search",
+                "vector_store_ids": [vector_store_id]
+            })
+    
+    return tools
+
+def prepare_conversation_context(module: Union[str, int], topic_name: str) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+    """Prepare the conversation context and find the previous response ID"""
+    # Get conversation context from state
+    conversation_context = TutorState.get_conversation_context(str(module), topic_name)
+    
+    # Log the conversation context for debugging
+    print(f"[Debug] Conversation context for module {module}, topic {topic_name}: {len(conversation_context)} messages")
+    
+    # Find the previous response ID
+    previous_response_id = None
+    if conversation_context:
+        for message in reversed(conversation_context):
+            if message.get("role") == "assistant" and message.get("response_id"):
+                previous_response_id = message.get("response_id")
+                break
+    
+    return conversation_context, previous_response_id
+
+def format_input_content(conversation_context: List[Dict[str, Any]], user_input: str, file_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Format the input content for the AI response"""
+    input_content = []
+    
+    # Get current topic for context
+    current_topic = TutorState.get_current_topic()
+    current_topic_name = current_topic.get("name", "") if current_topic else ""
+    
+    # Always include file context if available
+    if file_id:
+        cleaned_file_id = clean_file_id(file_id)
+        if cleaned_file_id:
+            input_content.append({
+                "role": "system",
+                "content": [{"type": "input_file", "file_id": cleaned_file_id}]
+            })
+    
+    # Add conversation history with topic context
+    for message in conversation_context:
+        msg_content = message.get("content", "")
+        msg_role = message.get("role", "")
+        
+        if msg_role in ["user", "assistant"]:
+            # Create a new message without the topic_name field for API compatibility
+            formatted_message = {
+                "role": msg_role,
+                "content": msg_content
+            }
+            input_content.append(formatted_message)
+        elif message.get("type") == "function_call":
+            arguments = message.get("arguments", "")
+            if isinstance(arguments, dict):
+                arguments = json.dumps(arguments)
+            
+            function_call = {
+                "type": "function_call",
+                "id": message.get("id"),
+                "call_id": message.get("call_id"),
+                "name": message.get("name"),
+                "arguments": arguments
+            }
+            input_content.append(function_call)
+        elif message.get("type") == "function_call_output":
+            input_content.append({
+                "type": "function_call_output",
+                "call_id": message.get("call_id"),
+                "output": message.get("output")
+            })
+    
+    # Add current user input without topic_name field
+    input_content.append({
+        "role": "user",
+        "content": user_input
+    })
+    
+    return input_content
+
+def process_streaming_response(response, text_placeholder) -> Tuple[str, str, Dict[str, Any]]:
+    """Process the streaming response from the AI"""
+    response_text = ""
+    response_id = None
+    final_tool_calls = {}
+    current_tool_call = None
+    
+    for event in response:
+        if event.type == "response.created":
+            response_id = event.response.id
+        elif event.type == "response.output_text.delta":
+            response_text += event.delta
+            text_placeholder.markdown(response_text)
+        elif event.type == "response.output_item.added" and event.item.type == "function_call":
+            current_tool_call = event.item
+            final_tool_calls[event.output_index] = {
+                "type": "function_call",
+                "id": event.item.id,
+                "call_id": event.item.call_id,
+                "name": event.item.name,
+                "arguments": ""
+            }
+        elif event.type == "response.function_call_arguments.delta":
+            if event.output_index in final_tool_calls:
+                final_tool_calls[event.output_index]["arguments"] += event.delta
+        elif event.type == "response.function_call_arguments.done":
+            if event.output_index in final_tool_calls:
+                try:
+                    final_tool_calls[event.output_index]["arguments"] = json.loads(event.arguments)
+                except json.JSONDecodeError:
+                    print(f"[Error] Failed to parse function call arguments: {event.arguments}")
+        elif event.type == "error":
+            raise Exception(f"Streaming error: {event.error}")
+    
+    return response_text, response_id, final_tool_calls
+
+def handle_function_calls(final_tool_calls: Dict[str, Any], input_content: List[Dict[str, Any]], module: Union[str, int]) -> Optional[str]:
+    """Handle function calls from the AI response"""
+    if not final_tool_calls:
+        return None
+        
+    print(f"[Function Call] Processing function calls: {final_tool_calls}")
+    new_messages = list(input_content)
+    
+    for tool_call in final_tool_calls.values():
+        arguments = tool_call["arguments"]
+        if isinstance(arguments, dict):
+            arguments = json.dumps(arguments)
+        
+        function_call_message = {
+            "type": "function_call",
+            "id": tool_call["id"],
+            "call_id": tool_call["call_id"],
+            "name": tool_call["name"],
+            "arguments": arguments
+        }
+        new_messages.append(function_call_message)
+        
+        parsed_args = json.loads(arguments) if isinstance(arguments, str) else arguments
+        result = handle_function_call({"name": tool_call["name"], "arguments": parsed_args}, st.session_state.user_id)
+        
+        if result is not None:
+            function_output_message = {
+                "type": "function_call_output",
+                "call_id": tool_call["call_id"],
+                "output": result
+            }
+            new_messages.append(function_output_message)
+            
+            if tool_call["name"] == "update_topic_competency":
+                return handle_competency_update_transition(tool_call, module)
+    
+    return None
+
+def handle_competency_update_transition(tool_call: Dict[str, Any], module: Union[str, int]) -> Optional[Dict[str, Any]]:
+    """Handle transition when a topic is completed"""
+    args = tool_call["arguments"]
+    if args.get("level") == 2:  # Topic completed
+        if TutorState.get_transition_state(str(module)):
+            print(f"[Topic Transition] Lock already held for module {module}, skipping")
+            return None
+            
+        try:
+            # Acquire lock
+            TutorState.set_transition_state(str(module), True)
+            
+            if TutorState.get_in_transition():
+                print(f"[Topic Transition] Already in transition, skipping")
+                return None
+            
+            # Set global transition state and timestamp
+            TutorState.set_in_transition(True)
+            st.session_state["topic_transition_time"] = datetime.now().timestamp()
+            
+            next_topic = get_next_non_competent_topic(module)
+            if next_topic:
+                old_topic = TutorState.get_current_topic()
+                old_topic_name = old_topic.get("name", "")
+                TutorState.clear_topic_context(str(module), old_topic_name)
+                
+                # Set the cutoff index for the new topic
+                TutorState.set_topic_cutoff_index(str(module))
+                
+                TutorState.set_current_topic(next_topic)
+                
+                # Generate initial Socratic question for the new topic
+                try:
+                    client = setup_openai_client()
+                    topic_description = next_topic.get('description', '')
+                    initial_prompt = f"""You are starting a new topic: {next_topic['name']}
+                    {f'Topic description: {topic_description}' if topic_description else ''}
+                    
+                    Your task is to:
+                    1. Begin with a direct, engaging question that immediately focuses on the core concept of the topic
+                    2. The question should be specific and practical, relating to real-world chemical engineering applications
+                    3. Avoid generic introductions or small talk - get straight to the topic
+                    4. Make the question challenging but approachable, encouraging critical thinking
+                    5. If possible, include a brief real-world scenario or example to make the question more concrete
+                    
+                    Generate your response as a single, focused Socratic question that will start the discussion. Do not include any introductory text or explanations - just the question itself."""
+                    
+                    print(f"[Topic Transition] Generating initial question for new topic: {next_topic['name']}")
+                    response = client.responses.create(
+                        model=TutorConfig.MODEL_NAME,
+                        instructions=initial_prompt,
+                        input=[{"role": "system", "content": initial_prompt}],
+                        tools=[]
+                    )
+                    initial_question = response.output_text
+                    print(f"[Topic Transition] Generated initial question: {initial_question}")
+                    
+                    # Return dictionary with congratulatory text and initial question
+                    return {
+                        "type": "topic_transition",
+                        "congratulations": f"Great! You've completed the previous topic. Let's move on to: {next_topic['name']}",
+                        "initial_question": initial_question
+                    }
+                except Exception as e:
+                    print(f"[Topic Transition Error] Failed to generate initial question: {str(e)}")
+                    # Still return the congratulatory message even if question generation fails
+                    return {
+                        "type": "topic_transition",
+                        "congratulations": f"Great! You've completed the previous topic. Let's move on to: {next_topic['name']}",
+                        "initial_question": None
+                    }
+        finally:
+            # Release locks
+            TutorState.set_transition_state(str(module), False)
+            # Don't release the global transition state here - it will be released after the UI is refreshed
+    
+    return None
+
+def get_bot_response(user_input: str, module: Union[str, int], file_id: Optional[str] = None, stream: bool = True) -> str:
     """Get a response from the tutor bot and track competencies using function calling"""
     try:
-        # Check if current topic is completed before generating response
-        current_topic = st.session_state.get("current_topic")
-        if current_topic:
-            # Use handle_competency_check instead of direct get_topic_competency call
-            competency_result = handle_competency_check(
-                {"topic_name": current_topic["name"]}, 
-                st.session_state.user_id
-            )
-            try:
-                competency_data = json.loads(competency_result)
-                if competency_data.get("progress", 0) >= 2:
-                    # Topic is completed, get next topic and reset chat
-                    next_topic = get_next_non_competent_topic(module)
-                    if next_topic:
-                        st.session_state["current_topic"] = next_topic
-                        # Clear chat history for new topic
-                        chat_history_key = f"{TutorConfig.CHAT_HISTORY_PREFIX}{module}"
-                        if chat_history_key in st.session_state:
-                            st.session_state[chat_history_key] = []
-                        # Generate initial message for new topic
-                        return f"Great! You've completed {current_topic['name']} ✅. Let's move on to: {next_topic['name']}\n\n{next_topic['description']}"
-                    else:
-                        return "Congratulations! You've completed all topics in this module!"
-            except json.JSONDecodeError:
-                # If the result isn't JSON, assume topic is not completed
-                pass
+        # Check for topic transition
+        transition_message = handle_topic_transition()
+        if transition_message:
+            # Add transition message to chat history
+            TutorState.add_message(str(module), {
+                "role": "assistant",
+                "content": transition_message
+            })
+            return transition_message
 
+        # Setup client and load prompt
         client = setup_openai_client()
         system_prompt = load_tutor_prompt()
         
-        tools = [
-            {
-                "type": "function",
-                "name": "update_topic_competency",
-                "description": "Update a student's competency level for a specific topic",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "topic_name": {
-                            "type": "string",
-                            "description": "The name of the topic to update"
-                        },
-                        "level": {
-                            "type": "integer",
-                            "description": "Competency level (0=not started, 1=in progress, 2=completed)",
-                            "enum": [0, 1, 2]
-                        },
-                        "reason": {
-                            "type": "string",
-                            "description": "Brief explanation for the competency update"
-                        }
-                    },
-                    "required": ["topic_name", "level", "reason"]
-                }
-            }
-        ]
+        # Prepare tools configuration
+        tools = prepare_tools_configuration(module)
+        
+        # Get current topic and prepare conversation context
+        current_topic = TutorState.get_current_topic()
+        if not current_topic:
+            print("[Error] No current topic found in state")
+            return "I apologize, but I've lost track of our current topic. Could you please let me know what topic we were discussing?"
+            
+        topic_name = current_topic.get("name", "")
+        if not topic_name:
+            print("[Error] Current topic has no name")
+            return "I apologize, but I've lost track of our current topic. Could you please let me know what topic we were discussing?"
+            
+        print(f"[Debug] Current topic: {topic_name}")
+        
+        # Get conversation context with the current topic
+        conversation_context, previous_response_id = prepare_conversation_context(module, topic_name)
+        print(f"[Debug] Conversation context length: {len(conversation_context)}")
+        
+        # Format input content without topic_name field for API compatibility
+        input_content = format_input_content(conversation_context, user_input, file_id)
+        
+        # Add topic context to system prompt instead of in the input messages
+        topic_description = current_topic.get('description', '')
+        system_prompt = f"""Current Topic: {topic_name}
+{topic_description if topic_description else ''}
 
-        # Add file search tool if vector store ID exists in session state
-        vector_store_key = f"vector_store_id_{module}"
-        if vector_store_key in st.session_state:
-            vector_store_id = st.session_state[vector_store_key]
-            if vector_store_id:
-                tools.append({
-                    "type": "file_search",
-                    "vector_store_ids": [vector_store_id]
-                })
+{system_prompt}"""
         
-        chat_history_key = f"{TutorConfig.CHAT_HISTORY_PREFIX}{module}"
-        previous_response_id = None
+        # Create placeholder for streaming text
+        text_placeholder = st.empty()
         
-        if chat_history_key in st.session_state:
-            for message in reversed(st.session_state[chat_history_key]):
-                if message.get("role") == "assistant" and message.get("response_id"):
-                    previous_response_id = message.get("response_id")
-                    break
-        
-        input_content = []
-        
-        is_first_message = chat_history_key in st.session_state and len(st.session_state[chat_history_key]) <= 3
-        
-        if is_first_message and file_id:
-            cleaned_file_id = clean_file_id(file_id)
-            if cleaned_file_id:
-                input_content.append({
-                    "role": "system",
-                    "content": [{"type": "input_file", "file_id": cleaned_file_id}]
-                })
-        
-        input_content.append({
-            "role": "user",
-            "content": user_input
-        })
-        
+        # Process the initial response
         response = client.responses.create(
             model=TutorConfig.MODEL_NAME,
             instructions=system_prompt,
             input=input_content,
             tools=tools,
-            previous_response_id=previous_response_id
+            previous_response_id=previous_response_id,
+            stream=stream
         )
         
-        if hasattr(response, 'output') and response.output and any(item.type == "function_call" for item in response.output):
-            new_messages = list(input_content)
-            
-            for tool_call in [item for item in response.output if item.type == "function_call"]:
-                new_messages.append(tool_call)
+        # Process streaming response
+        response_text, response_id, final_tool_calls = process_streaming_response(response, text_placeholder)
+        
+        # Handle function calls
+        transition_message = handle_function_calls(final_tool_calls, input_content, module)
+        if transition_message:
+            # Check if transition_message is a dictionary with type "topic_transition"
+            if isinstance(transition_message, dict) and transition_message.get("type") == "topic_transition":
+                # Add congratulatory message to chat history with success styling
+                TutorState.add_message(str(module), {
+                    "role": "assistant",
+                    "content": transition_message["congratulations"],
+                    "style": "success"
+                })
                 
-                result = handle_function_call(tool_call, st.session_state.user_id)
-                
-                if result is not None:
-                    new_messages.append({
-                        "type": "function_call_output",
-                        "call_id": tool_call.call_id,
-                        "output": result
+                # Add initial question as a separate message with normal styling if it exists
+                if transition_message.get("initial_question"):
+                    TutorState.add_message(str(module), {
+                        "role": "assistant",
+                        "content": transition_message["initial_question"]
                     })
-                    
-                    # Check if this was a competency update and if it completed the topic
-                    if tool_call.name == "update_topic_competency":
-                        args = json.loads(tool_call.arguments)
-                        if args.get("level") == 2:  # Topic completed
-                            next_topic = get_next_non_competent_topic(module)
-                            if next_topic:
-                                st.session_state["current_topic"] = next_topic
-                                # Clear chat history for new topic
-                                if chat_history_key in st.session_state:
-                                    st.session_state[chat_history_key] = []
-                                # Generate initial message for new topic
-                                return f"Great! You've completed the previous topic. Let's move on to: {next_topic['name']}\n\n{next_topic['description']}"
-            
-            try:
-                new_response = client.responses.create(
-                    model=TutorConfig.MODEL_NAME,
-                    instructions=system_prompt,
-                    input=new_messages
-                )
                 
-                response_text = new_response.output_text
-                response = new_response
+                # Display the messages in the UI
+                text_placeholder.success(transition_message["congratulations"])
+                if transition_message.get("initial_question"):
+                    text_placeholder.markdown(transition_message["initial_question"])
                 
-            except Exception as tool_error:
-                st.error(f"Error handling function calls: {str(tool_error)}")
-                if st.session_state.get("debug_mode", False):
-                    st.exception(tool_error)
-                    st.write("Debug - Messages:", new_messages)
-        else:
-            response_text = response.output_text
+                # Return combined message for backward compatibility
+                return transition_message["congratulations"] + "\n\n" + (transition_message.get("initial_question") or "")
+            else:
+                # Handle legacy string format
+                TutorState.add_message(str(module), {
+                    "role": "assistant",
+                    "content": transition_message
+                })
+                # Display the transition message in the UI
+                text_placeholder.markdown(transition_message)
+                return transition_message
         
-        if chat_history_key not in st.session_state:
-            st.session_state[chat_history_key] = []
-        
+        # Create new message with topic information for our internal state
         new_message = ChatMessage(
             role="assistant",
             content=response_text,
-            response_id=response.id
+            response_id=response_id,
+            topic_name=topic_name
         )
-        st.session_state[chat_history_key].append(new_message.to_dict())
         
-        # Limit chat history size
-        if len(st.session_state[chat_history_key]) > TutorConfig.MAX_CHAT_HISTORY:
-            st.session_state[chat_history_key] = st.session_state[chat_history_key][-TutorConfig.MAX_CHAT_HISTORY:]
+        # Add to chat history using TutorState
+        TutorState.add_message(str(module), new_message.to_dict())
         
         return response_text
         
     except Exception as e:
-        st.error(f"Error generating response: {str(e)}")
-        if st.session_state.get("debug_mode", False):
-            st.exception(e)
-        return "I'm sorry, I encountered an error. Please try again."
+        print(f"[Error] Error in get_bot_response: {str(e)}")
+        return f"An error occurred: {str(e)}"
 
 def render_tutor_interface(module_id: Union[str, int], module_title: str, module_description: str, topics: List[Any], file_id: Optional[str] = None) -> None:
     """Render the tutor interface for a specific module"""
@@ -241,7 +501,7 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
         # Initialize vector store ID in session state if not exists
         vector_store_key = f"vector_store_id_{module_id}"
         if vector_store_key not in st.session_state:
-            modules_data = get_modules_data()
+            modules_data = get_cached_modules_data()
             module_id_str = str(module_id)
             if "modules" in modules_data and isinstance(modules_data["modules"], list):
                 for m in modules_data["modules"]:
@@ -272,12 +532,15 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
         # Render sidebar
         render_sidebar(module_title)
         
-        # Get user's progress
-        progress_summary = get_module_progress_summary(module_id)
-        print(f"[Tutor Interface] Progress summary for module {module_id}: {progress_summary}")
+        # Get user's progress from cache
+        progress_key = f"progress_summary_{module_id}"
+        if progress_key not in st.session_state:
+            st.session_state[progress_key] = get_module_progress_summary(module_id)
+        progress_summary = st.session_state[progress_key]
+        print(f"[Tutor Interface] Progress summary for module {module_id}")
         
         # Initialize chat history for this module if not exists
-        chat_history_key = f"{TutorConfig.CHAT_HISTORY_PREFIX}{module_id}"
+        chat_history_key = TutorState._get_message_key(str(module_id))
         print(f"[Tutor Interface] Chat history key: {chat_history_key}")
         print(f"[Tutor Interface] Chat history exists: {chat_history_key in st.session_state}")
         
@@ -295,11 +558,14 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
                 st.session_state[chat_history_key] = []
                 print(f"[Tutor Interface] Initialized empty chat history for module {module_id}")
                 
+                # Set the cutoff index for the new topic
+                TutorState.set_topic_cutoff_index(str(module_id))
+                
                 # Generate initial Socratic question
                 try:
                     client = setup_openai_client()
                     current_topic = st.session_state["current_topic"]
-                    topic_description = current_topic.get('description', '')  # Get description if available, empty string if not
+                    topic_description = current_topic.get('description', '')
                     initial_prompt = f"""You are starting a new topic: {current_topic['name']}
                     {f'Topic description: {topic_description}' if topic_description else ''}
                     
@@ -321,14 +587,14 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
                     )
                     print(f"[Tutor Interface] Generated initial question: {response.output_text}")
 
-                    # Add the initial question to chat history without displaying it directly
-                    st.session_state[chat_history_key].append(
-                        ChatMessage(
-                            role="assistant",
-                            content=response.output_text,
-                            response_id=response.id
-                        ).to_dict()
-                    )
+                    # Add the initial question to chat history using TutorState
+                    initial_message = ChatMessage(
+                        role="assistant",
+                        content=response.output_text,
+                        response_id=response.id
+                    ).to_dict()
+                    TutorState.add_message(str(module_id), initial_message)
+                    
                     print(f"[Tutor Interface] Added initial question to chat history. Current chat history length: {len(st.session_state[chat_history_key])}")
                 except Exception as e:
                     print(f"[Tutor Interface Error] Failed to generate initial question: {str(e)}")
@@ -338,7 +604,6 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
             else:
                 print(f"[Tutor Interface] No next topic found for module {module_id}")
                 st.success("🎉 Congratulations! You've completed all topics in this module!")
-                return
         
         # Display module information
         st.markdown(module_description)
@@ -358,108 +623,74 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
             st.markdown("---")
             st.subheader("Chat with AI-Chris")
             
-            # Display chat history immediately
-            if chat_history_key in st.session_state:
-                print(f"[Tutor Interface] Displaying chat history for module {module_id}. Chat history length: {len(st.session_state[chat_history_key])}")
-                render_chat_history(st.session_state[chat_history_key])
-            else:
-                print(f"[Tutor Interface] No chat history found for module {module_id}")
+            # Initialize session state for current prompt if not exists
+            if "current_prompt" not in st.session_state:
+                st.session_state.current_prompt = None
             
-            # Chat input
-            if prompt := st.chat_input("Display your competency by answering questions..."):
+            # Create a container for the chat history
+            history_container = st.container()
+            
+            # Display chat history in the container
+            with history_container:
+                if chat_history_key in st.session_state:
+                    print(f"[Tutor Interface] Displaying chat history for module {module_id}. Chat history length: {len(st.session_state[chat_history_key])}")
+                    # Use the new method to get complete chat history for UI
+                    full_chat_history = TutorState.get_chat_history_for_ui(str(module_id))
+                    render_chat_history(full_chat_history)
+                else:
+                    print(f"[Tutor Interface] No chat history found for module {module_id}")
+            
+            # Check if we need to process a new message
+            if st.session_state.current_prompt:
+                prompt = st.session_state.current_prompt
                 try:
-                    # Add user message to chat history
-                    st.session_state[chat_history_key].append(
-                        ChatMessage(role="user", content=prompt).to_dict()
-                    )
-                    
-                    # Display user message
-                    with st.chat_message("user"):
-                        st.markdown(prompt)
-                    
                     # Get and display assistant response
                     with st.chat_message("assistant"):
-                        with st.spinner("AI-Chris is thinking..."):
-                            response = get_bot_response(prompt, module_id, file_id)
-                            # Only display response if it's not empty (topic not completed)
-                            if response:
-                                st.markdown(response)
-                            
-                            # Check if we should move to the next topic
-                            current_topic = st.session_state.get("current_topic")
-                            if current_topic:
-                                # Use handle_competency_check instead of direct get_topic_competency call
-                                competency_result = handle_competency_check(
-                                    {"topic_name": current_topic["name"]}, 
-                                    st.session_state.user_id
-                                )
-                                try:
-                                    competency_data = json.loads(competency_result)
-                                    if competency_data.get("progress", 0) >= 2:
-                                        print(f"[Topic Completion] Topic: {current_topic['name']}, Final Progress: {competency_data.get('progress', 0)}")
-                                        # Topic completed, get next topic
-                                        next_topic = get_next_non_competent_topic(module_id)
-                                        if next_topic:
-                                            print(f"[Topic Transition] From: {current_topic['name']}, To: {next_topic['name']}")
-                                            st.session_state["current_topic"] = next_topic
-                                            # Show simple congratulatory message with tick
-                                            st.success(f"✅ {current_topic['name']}")
-                                            # Clear chat history for the new topic
-                                            st.session_state[chat_history_key] = []
-                                            
-                                            # Generate initial question for the new topic
-                                            try:
-                                                client = setup_openai_client()
-                                                topic_description = next_topic.get('description', '')  # Get description if available, empty string if not
-                                                initial_prompt = f"""You are starting a new topic: {next_topic['name']}
-                                                {f'Topic description: {topic_description}' if topic_description else ''}
-                                                
-                                                Your task is to:
-                                                1. Begin with a direct, engaging question that immediately focuses on the core concept of the topic
-                                                2. The question should be specific and practical, relating to real-world chemical engineering applications
-                                                3. Avoid generic introductions or small talk - get straight to the topic
-                                                4. Make the question challenging but approachable, encouraging critical thinking
-                                                5. If possible, include a brief real-world scenario or example to make the question more concrete
-                                                
-                                                Generate your response as a single, focused Socratic question that will start the discussion. Do not include any introductory text or explanations - just the question itself."""
-                                                
-                                                response = client.responses.create(
-                                                    model=TutorConfig.MODEL_NAME,
-                                                    instructions=initial_prompt,
-                                                    input=[{"role": "system", "content": initial_prompt}],
-                                                    tools=[]
-                                                )
-
-                                                # Add the initial question to chat history without displaying it directly
-                                                st.session_state[chat_history_key].append(
-                                                    ChatMessage(
-                                                        role="assistant",
-                                                        content=response.output_text,
-                                                        response_id=response.id
-                                                    ).to_dict()
-                                                )
-                                                
-                                                # Display the new chat history immediately
-                                                render_chat_history(st.session_state[chat_history_key])
-                                            except Exception as e:
-                                                print(f"[Error] Failed to generate initial question for {next_topic['name']}: {str(e)}")
-                                                if st.session_state.get("debug_mode", False):
-                                                    st.error(f"Error generating initial question: {str(e)}")
-                                                raise  # Re-raise the exception to be handled by the caller
-                                        else:
-                                            print("[Module Completion] All topics completed in module")
-                                            st.success("🎉 Congratulations! You've completed all topics in this module!")
-                                            return
-                                except json.JSONDecodeError:
-                                    # If the result isn't JSON, assume topic is not completed
-                                    pass
-                            
+                        response = get_bot_response(prompt, module_id, file_id, stream=True)
+                        # The response is already displayed via the placeholder in get_bot_response
+                    
+                    # Reset the current prompt
+                    st.session_state.current_prompt = None
+                    
+                    # Check if a topic transition occurred
+                    if TutorState.get_in_transition():
+                        # Force a rerun to refresh the UI with the new topic
+                        st.rerun()
+                
                 except Exception as e:
                     print(f"[Error] Failed to process message: {str(e)}")
                     st.error(f"Error processing your message: {str(e)}")
                     if st.session_state.get("debug_mode", False):
                         st.exception(e)
                     st.info("Please try rephrasing your question or try again later.")
+            
+            # Add a small space between chat history and input
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            # Chat input
+            if prompt := st.chat_input("Display your competency by answering questions"):
+                # Display the user message immediately
+                # with history_container:
+                #     with st.chat_message("user"):
+                #         st.markdown(prompt)
+                
+                # Store the prompt in session state
+                st.session_state.current_prompt = prompt
+                
+                # Get current topic name
+                current_topic = TutorState.get_current_topic()
+                topic_name = current_topic.get("name", "")
+                
+                # Add user message to chat history using TutorState
+                user_message = ChatMessage(
+                    role="user", 
+                    content=prompt,
+                    topic_name=topic_name
+                ).to_dict()
+                TutorState.add_message(str(module_id), user_message)
+                
+                # Trigger rerun to process the message
+                st.rerun()
         
         # Render tutorial questions in its container
         with tutorial_container:
@@ -468,7 +699,7 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
             st.subheader("Tutorial Questions")
             
             # Get tutorial questions for the current module
-            modules_data = get_modules_data()
+            modules_data = get_cached_modules_data()
             if "modules" in modules_data and isinstance(modules_data["modules"], list):
                 module_data = None
                 target_title = MODULE_TITLES.get(str(module_id))
@@ -486,8 +717,8 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
                         tutorial_questions = {f"q{i+1}": q for i, q in enumerate(tutorial_questions)}
                     
                     if tutorial_questions:
-                        # Get user progress data
-                        user_progress = get_user_progress(st.session_state.user_id)
+                        # Get user progress data from cache
+                        user_progress = get_cached_user_progress()
                         user_questions = {q["question_id"]: q for q in user_progress.get("tutorial_questions", [])}
                         
                         for question_id, question_info in tutorial_questions.items():

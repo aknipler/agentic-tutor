@@ -1,5 +1,5 @@
 import streamlit as st
-from mongodb.connectors import get_modules_data, get_user_progress, update_user_progress
+from mongodb.connectors import get_user_progress, update_user_progress, get_modules_data
 from datetime import datetime
 
 BASE_URL = "http://localhost:8501/"
@@ -32,7 +32,11 @@ def get_status_from_progress(progress):
 def load_modules_data():
     """Load module information from MongoDB"""
     try:
-        data = get_modules_data()
+        # Use session state to cache modules data
+        if "cached_modules_data" not in st.session_state:
+            st.session_state.cached_modules_data = get_modules_data()
+        
+        data = st.session_state.cached_modules_data
         if st.session_state.get('debug_mode', False):
             st.write("Debug: Modules data loaded:", data)
         return data
@@ -93,10 +97,6 @@ def overview():
     # Get user progress data
     user_data = load_user_progress()
     
-    # Map topics by name instead of ID
-    user_topics_by_name = {topic["name"]: topic for topic in user_data.get("topics", [])}
-    user_questions = {q["question_id"]: q for q in user_data.get("tutorial_questions", [])}
-    
     # Show modules data in debug mode
     if st.session_state.get('debug_mode', False):
         with st.expander("Debug: Modules Data"):
@@ -114,12 +114,10 @@ def overview():
     if st.session_state.get('debug_mode', False):
         with st.expander("Debug: User Progress"):
             st.write("Raw user data:", user_data)
-            st.write("User topics by name:", user_topics_by_name)
-            st.write("User questions:", user_questions)
-
+    
     # Display last updated time if available
-    if "last_updated" in user_data:
-        last_updated = user_data["last_updated"]
+    if "updated_at" in user_data:
+        last_updated = user_data["updated_at"]
         if isinstance(last_updated, dict) and "$date" in last_updated:
             last_updated = datetime.fromtimestamp(last_updated["$date"]["$numberLong"] / 1000)
         st.info(f"Last updated: {last_updated.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -155,9 +153,10 @@ def overview():
             st.warning(f"Module '{title}' not found in database")
     
     # Display modules in main content area
-    for module_index, module_info in enumerate(sorted_modules, 1):
-        module_id = str(module_index)
-        module_title = module_info.get("title", f"Module {module_id}")
+    for module_info in sorted_modules:
+        # Get module index and title
+        module_index = module_info.get("index", 0)
+        module_title = module_info.get("title", f"Module {module_index}")
         
         # Get topics from module_info
         topics = module_info.get("topics", [])
@@ -177,25 +176,28 @@ def overview():
         else:
             tutorial_questions_dict = tutorial_questions
         
-        # Calculate completion percentage - topic progress is now based on names
-        total_items = len(topics) + len(tutorial_questions_dict)
-        completed_topics = 0
-        completed_tutorials = 0
+        # Get module progress data from the new structure
+        module_progress_data = user_data.get("modules", {}).get(str(module_index), {})
+        topics_progress = module_progress_data.get("topics", {})
+        questions_progress = module_progress_data.get("questions", {})
         
-        # Count completed topics using topic name lookup
+        # Calculate completion percentage
+        total_items = len(topics) + len(tutorial_questions_dict)
+        completed_items = 0
+        
+        # Count completed topics
         for topic in topics:
             topic_name = topic.get('name', topic) if isinstance(topic, dict) else topic
-            topic_data = user_topics_by_name.get(topic_name, {})
-            if topic_data.get("status") == "completed" or topic_data.get("progress", 0) >= 2:
-                completed_topics += 1
+            topic_data = topics_progress.get(topic_name, {})
+            if topic_data.get("progress", 0) >= 2:
+                completed_items += 1
         
         # Count completed tutorial questions
         for q_id in tutorial_questions_dict.keys():
-            if user_questions.get(q_id, {}).get("status") == "completed":
-                completed_tutorials += 1
+            if questions_progress.get(q_id, {}).get("status") == "completed":
+                completed_items += 1
         
-        completed_items = completed_topics + completed_tutorials
-        
+        # Calculate module progress (0-2 scale)
         module_progress = int((completed_items / total_items) * 2) if total_items > 0 else 0
         module_status = get_status_from_progress(module_progress)
         
@@ -207,12 +209,12 @@ def overview():
             # Display topics section
             st.markdown("#### Module Topics")
             if topics:
-                for i, topic in enumerate(topics):
+                for topic in topics:
                     # Get topic name based on format
                     topic_name = topic.get('name', topic) if isinstance(topic, dict) else topic
                     
-                    # Get topic data by name
-                    topic_data = user_topics_by_name.get(topic_name, {})
+                    # Get topic data from the new structure
+                    topic_data = topics_progress.get(topic_name, {})
                     progress = topic_data.get("progress", 0)
                     status = get_status_from_progress(progress)
                     status_emoji = get_status_emoji(status)
@@ -248,10 +250,9 @@ def overview():
                     # Get question title
                     question_title = question_info.get("question", f"Question {question_id}")
                     
-                    # Get progress data
-                    q_data = user_questions.get(question_id, {})
-                    progress = q_data.get("progress", 0)
-                    status = get_status_from_progress(progress)
+                    # Get question progress from the new structure
+                    q_data = questions_progress.get(question_id, {})
+                    status = q_data.get("status", "not_started")
                     status_emoji = get_status_emoji(status)
                     attempts = q_data.get("attempts", 0)
                     

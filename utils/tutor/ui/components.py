@@ -31,9 +31,33 @@ def render_sidebar(module_title: str) -> None:
 
 def render_chat_history(chat_history: List[Dict[str, Any]]) -> None:
     """Render the chat history with proper message formatting"""
-    for message in chat_history:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+    # Create a container for all messages
+    chat_container = st.container()
+    
+    # Display messages in chronological order
+    with chat_container:
+        for message in chat_history:
+            # Ensure we're using st.chat_message for proper chat UI
+            with st.chat_message(message["role"]):
+                # Handle different message types
+                if isinstance(message.get("content"), str):
+                    # Check if this is a transition message (contains "Great! You've completed")
+                    if "Great! You've completed" in message["content"]:
+                        # Display with special formatting for transition messages
+                        st.success(message["content"])
+                    else:
+                        st.markdown(message["content"])
+                elif isinstance(message.get("content"), dict):
+                    # Handle structured content if needed
+                    st.markdown(message["content"].get("text", ""))
+                
+                # Show debug info if enabled
+                if st.session_state.get("debug_mode", False):
+                    st.caption(f"Message ID: {message.get('id', 'N/A')}")
+                    st.caption(f"Topic: {message.get('topic_name', 'N/A')}")
+    
+    # Return the container for further use
+    return chat_container
 
 def render_progress_summary(progress_summary: Optional[str]) -> None:
     """Render the progress summary with proper formatting"""

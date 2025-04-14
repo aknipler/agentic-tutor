@@ -1,5 +1,5 @@
 import streamlit as st
-from mongodb.connectors import get_modules_data
+from utils.cache import get_cached_modules_data
 from utils.tutor import render_tutor_interface
 
 # Check if user is logged in
@@ -10,9 +10,9 @@ if "logged_in" not in st.session_state or not st.session_state.logged_in:
 # Load module data
 @st.cache_data(ttl=10)
 def load_module_data():
-    """Load module information from MongoDB"""
+    """Load module information from cache"""
     try:
-        data = get_modules_data()
+        data = get_cached_modules_data()
         if "modules" in data and isinstance(data["modules"], list):
             # Find the module with the specific title
             target_title = "Large Kit - Reactors" # Corrected title
