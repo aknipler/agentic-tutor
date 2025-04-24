@@ -9,7 +9,7 @@ from openai import OpenAI
 from openai.types.vector_store import VectorStore
 import tempfile
 from mongodb.connectors import get_modules_data, get_mongo_client
-from mongodb.connectors.user_progress import create_user, list_users, delete_user, get_user_progress_details
+from mongodb.connectors.user_progress import create_user_progress, list_users, delete_user, get_user_progress_details
 
 
 # Set page config
@@ -492,7 +492,7 @@ def main():
         if st.button("Create User"):
             if new_user_id:
                 try:
-                    if create_user(new_user_id):
+                    if create_user_progress(new_user_id):
                         st.success(f"User '{new_user_id}' created successfully!")
                         st.rerun()
                     else:

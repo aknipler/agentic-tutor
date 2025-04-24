@@ -1,10 +1,12 @@
 import streamlit as st
-from .data import load_module_data, get_module_by_title
-from .ui import render_sidebar, render_module_selector, render_questions_paginated
-from .utils import convert_questions_to_dict
 
 def main():
     """Main entry point for the assessor module"""
+    # Import here to avoid circular imports
+    from .data import load_module_data, get_module_by_title
+    from .ui import render_sidebar, render_module_selector, render_questions_paginated
+    from .utils import convert_questions_to_dict
+    
     # Check if user is logged in
     if "logged_in" not in st.session_state or not st.session_state.logged_in:
         st.warning("Please login from the Home page to access the assessor.")
@@ -13,10 +15,10 @@ def main():
     
     st.title("Tutorial Questions")
     
-    # Render sidebar
-    render_sidebar(st.session_state.user_id)
+    # Get user ID from session state
+    user_id = st.session_state.get("user_id", "user123")
     
-    # Load modules data
+    # Load module data
     modules = load_module_data()
     if not modules:
         st.error("No modules data available. Please try again later.")
@@ -33,6 +35,9 @@ def main():
             if str(i) == preselected_module_id:
                 preselected_module_title = module.get("title")
                 break
+    
+    # Render sidebar with user info
+    render_sidebar(user_id)
     
     # Render module selector with preselection if available
     selected_module_title = render_module_selector(modules, default=preselected_module_title)
@@ -56,7 +61,7 @@ def main():
         return
     
     # Get module ID
-    module_id = str(modules.index(selected_module_data) + 1)
+    module_id = modules.index(selected_module_data)
     
     # Initialize question_page in session state if not exists
     if "question_page" not in st.session_state:
@@ -71,4 +76,4 @@ def main():
             st.session_state.question_page = (question_index // 5) + 1  # Assuming 5 questions per page
     
     # Render questions with pagination
-    render_questions_paginated(tutorial_questions, st.session_state.user_id, module_id) 
+    render_questions_paginated(tutorial_questions, user_id, module_id) 
