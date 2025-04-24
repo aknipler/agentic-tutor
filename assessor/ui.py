@@ -5,10 +5,10 @@ from .data import (
     get_user_module_progress, 
     update_question_progress, 
     save_assessment_results, 
-    get_mongo_client, 
     get_module_data,
     get_assessment_results
 )
+from mongodb.connectors import get_mongo_client
 from .file_handler import save_uploaded_file, get_file_url
 from .openai_assessor import assess_answer
 from datetime import datetime
@@ -17,41 +17,32 @@ from datetime import datetime
 if "question_page" not in st.session_state:
     st.session_state.question_page = 1
 
-def get_assessment_results(user_id: str, module_id: str, question_id: str) -> Optional[Dict]:
+def get_question_assessment_results(user_id: str, module_id: str, question_index: int) -> Optional[Dict]:
     """Get assessment results for a specific question"""
     try:
-        client = get_mongo_client()
-        db = client["funce_db"]
-        progress_collection = db["user_module_progress"]
+        # Get the assessment results from the database
+        assessment = get_assessment_results(user_id, module_id, question_index)
         
-        # Find the user's progress document
-        user_doc = progress_collection.find_one({"user_id": user_id})
+        if assessment:
+            # Convert datetime strings back to datetime objects if needed
+            if "last_assessed" in assessment and isinstance(assessment["last_assessed"], str):
+                assessment["last_assessed"] = datetime.fromisoformat(assessment["last_assessed"])
+            if "last_attempt" in assessment and isinstance(assessment["last_attempt"], str):
+                assessment["last_attempt"] = datetime.fromisoformat(assessment["last_attempt"])
+            
+            # Add a flag to indicate this is an assessed question
+            assessment["assessed"] = True
         
-        if user_doc:
-            # Extract question data from the nested structure
-            question_data = user_doc.get("modules", {}).get(module_id, {}).get("questions", {}).get(question_id)
-            
-            if question_data:
-                # Convert datetime objects to strings for JSON serialization
-                if "last_assessed" in question_data:
-                    question_data["last_assessed"] = question_data["last_assessed"].isoformat()
-                if "last_attempt" in question_data:
-                    question_data["last_attempt"] = question_data["last_attempt"].isoformat()
-                return question_data
-            
-        return None
+        return assessment
     except Exception as e:
-        st.error(f"Error retrieving assessment results: {str(e)}")
+        print(f"[Error] Failed to get assessment results: {str(e)}")
         return None
 
 def render_sidebar(user_id: str):
     """Render the sidebar with user info and logout button"""
-    col1, col2 = st.sidebar.columns([3, 1])
-    with col1:
-        st.info(f"Logged in as: {user_id}")
-    with col2:
+    with st.sidebar:
+        st.write(f"User: {user_id}")
         if st.button("Logout"):
-            st.session_state.logged_in = False
             st.session_state.user_id = None
             st.rerun()
 
@@ -81,20 +72,36 @@ def render_questions_paginated(questions: Dict, user_id: str, module_id: str, pe
     question_items = list(questions.items())
     current_questions = dict(question_items[start_idx:end_idx])
     
-    # Get module data (cached) which now includes both progress and assessment data
+    # Get module data (cached) which now includes progress, topics, and assessment data
     module_data = get_module_data(user_id, module_id)
     module_progress = module_data["progress"]
-    questions_data = module_data["assessments"]  # This now contains the assessment data
+    topics_data = module_data["topics"]  # This contains the topics data
+    questions_data = module_data["assessments"]  # This contains the assessment data
+    
+    # Create a complete module_progress object to pass to render_question
+    complete_progress = {
+        **module_progress,
+        "topics": topics_data,
+        "questions": questions_data
+    }
     
     # Render current page of questions
     for question_id, question_info in current_questions.items():
+        # Ensure question_id is in the correct format for MongoDB lookup
+        # If it's a numeric string, keep it as is (it's already 1-based)
+        # If it's in format 'q1', 'q2', etc., extract the number
+        if question_id.startswith('q') and question_id[1:].isdigit():
+            db_question_id = question_id[1:]  # Extract the number part
+        else:
+            db_question_id = question_id
+            
         render_question(
             question_id, 
             question_info, 
             user_id, 
             module_id,
-            module_progress,
-            questions_data.get(question_id)  # Pass the question data which includes assessment info
+            complete_progress,  # Pass the complete progress data
+            questions_data.get(db_question_id)  # Pass the question data which includes assessment info
         )
     
     # Pagination controls
@@ -116,12 +123,27 @@ def render_questions_paginated(questions: Dict, user_id: str, module_id: str, pe
 def render_question(question_id: str, question_info: Dict, user_id: str, module_id: str, 
                   module_progress: Dict = None, assessment: Dict = None):
     """Render a single question with its answer input and file upload"""
+    # Convert question_id to index (zero-based)
+    # If question_id is in format like 'q1', 'q2', etc., extract the number and subtract 1
+    if question_id.startswith('q') and question_id[1:].isdigit():
+        question_index = int(question_id[1:]) - 1
+    # If it's just numeric, convert directly
+    elif question_id.isdigit():
+        question_index = int(question_id) - 1
+    else:
+        # Fallback - use as is, but warn
+        question_index = 0
+        print(f"[WARNING] Could not convert question_id '{question_id}' to index. Using 0.")
+    
     question_text = question_info.get("question", f"Question {question_id}")
     
     # Get and prepare question progress first
     if module_progress is None:
         module_progress = get_user_module_progress(user_id, module_id)
-    question_progress = module_progress.get("questions", {}).get(question_id, {})
+    
+    # For DB lookup, we need the 1-based string ID that's in the database
+    db_question_id = str(question_index + 1)  # Convert to 1-based string ID for MongoDB
+    question_progress = module_progress.get("questions", {}).get(db_question_id, {})
     status = question_progress.get("status", "not_started")
     attempts = question_progress.get("attempts", 0)
     
@@ -148,7 +170,7 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
         # Get and display question progress
         if module_progress is None:
             module_progress = get_user_module_progress(user_id, module_id)
-        question_progress = module_progress.get("questions", {}).get(question_id, {})
+        question_progress = module_progress.get("questions", {}).get(db_question_id, {})
         status = question_progress.get("status", "not_started")
         attempts = question_progress.get("attempts", 0)
         
@@ -168,7 +190,7 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
             if answer.strip() or uploaded_files:
                 # Increment attempts *before* assessment
                 new_attempts = attempts + 1
-                update_question_progress(user_id, module_id, question_id, status="in_progress", attempts=new_attempts)
+                update_question_progress(user_id, module_id, question_index, status="in_progress", attempts=new_attempts)
 
                 # Process file uploads
                 image_data_list = []
@@ -192,7 +214,7 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
                     save_assessment_results(
                         user_id=user_id,
                         module_id=module_id,
-                        question_id=question_id,
+                        question_index=question_index,
                         competency_level=assessment["competency_level"],
                         feedback=assessment["feedback"],
                         status=assessment["status"],
@@ -218,7 +240,7 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
                         st.write(f"Competency Level: {competency_text}")
                         st.write(f"Feedback: {assessment['feedback']}")
                     
-                    st.rerun()
+                    # st.rerun()
             else:
                 st.warning("Please provide either a text answer or upload a solution (or both) before submitting.")
         
@@ -230,13 +252,14 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
                 assessment = cached_assessment
             else:
                 # If not in session state, get from database
-                assessment = get_assessment_results(user_id, module_id, question_id)
+                assessment = get_question_assessment_results(user_id, module_id, question_index)
                 if assessment:
                     # Update session state with the retrieved assessment
                     st.session_state[question_key]["assessment"] = assessment
         
         # Display previous feedback if available
-        if assessment and assessment.get("assessed", False):
+        print(f"[DEBUG] assessment: {assessment}")
+        if assessment and assessment.get("competency_level", 0) > 0:
             with st.container(border=True):
                 st.subheader("Assessment Results")
                 competency_level = assessment.get("competency_level", 0)

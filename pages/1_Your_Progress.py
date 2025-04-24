@@ -167,15 +167,15 @@ def overview():
         # Convert tutorial_questions to dictionary format if it's a list (new MongoDB format)
         tutorial_questions_dict = {}
         if isinstance(tutorial_questions, list):
-            for question in tutorial_questions:
-                question_id = question.get("question_id", f"q{len(tutorial_questions_dict) + 1}")
+            for i, question in enumerate(tutorial_questions):
+                # Use the index+1 as a string for the question_id
+                question_id = str(i + 1)
                 tutorial_questions_dict[question_id] = {
                     "question": question.get("question", ""),
                     "expected_answer": question.get("expected_answer", "")
                 }
         else:
             tutorial_questions_dict = tutorial_questions
-        
         # Get module progress data from the new structure
         module_progress_data = user_data.get("modules", {}).get(str(module_index), {})
         topics_progress = module_progress_data.get("topics", {})
@@ -194,7 +194,9 @@ def overview():
         
         # Count completed tutorial questions
         for q_id in tutorial_questions_dict.keys():
-            if questions_progress.get(q_id, {}).get("status") == "completed":
+            q_data = questions_progress.get(q_id, {})
+            # Check both status and competency_level
+            if q_data.get("status") == "completed" or q_data.get("competency_level", 0) >= 2:
                 completed_items += 1
         
         # Calculate module progress (0-2 scale)
@@ -202,7 +204,7 @@ def overview():
         module_status = get_status_from_progress(module_progress)
         
         # Create an expander for each module (all collapsed by default)
-        with st.expander(f"Module {module_index}: {module_title} {get_status_emoji(module_status)}", expanded=False):
+        with st.expander(f"Module {module_index + 1}: {module_title} {get_status_emoji(module_status)}", expanded=False):
             # Display progress bar
             st.progress(module_progress / 2)
             
@@ -252,7 +254,15 @@ def overview():
                     
                     # Get question progress from the new structure
                     q_data = questions_progress.get(question_id, {})
+                    
+                    # Determine status based on both status field and competency_level
                     status = q_data.get("status", "not_started")
+                    competency_level = q_data.get("competency_level", 0)
+                    
+                    # If competency_level is 2 (full understanding), treat as completed
+                    if competency_level >= 2:
+                        status = "completed"
+                        
                     status_emoji = get_status_emoji(status)
                     attempts = q_data.get("attempts", 0)
                     
