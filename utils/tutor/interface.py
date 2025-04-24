@@ -17,6 +17,7 @@ from .handlers.competency import (
 from .ui.components import render_sidebar, render_chat_history, render_progress_summary
 from mongodb.connectors import get_modules_data, get_user_progress, update_competency
 from utils.cache import get_cached_modules_data, invalidate_modules_cache
+from assessor.utils import get_status_emoji
 
 # Base URL for the application
 BASE_URL = "http://localhost:8502/"
@@ -713,32 +714,48 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
                 if module_data:
                     tutorial_questions = module_data.get("tutorial_questions", {})
                     if isinstance(tutorial_questions, list):
-                        # Convert list format to dictionary format
-                        tutorial_questions = {f"q{i+1}": q for i, q in enumerate(tutorial_questions)}
+                        # Convert list format to dictionary format using simple index string keys
+                        tutorial_questions = {str(i + 1): q for i, q in enumerate(tutorial_questions)}
                     
                     if tutorial_questions:
                         # Get user progress data from cache
                         user_progress = get_cached_user_progress()
-                        user_questions = {q["question_id"]: q for q in user_progress.get("tutorial_questions", [])}
-                        
+                        # --- Corrected Access to User Question Progress ---
+                        # Access the nested structure: user -> modules -> module_id -> questions
+                        module_progress = user_progress.get("modules", {}).get(str(module_id), {})
+                        user_questions_progress = module_progress.get("questions", {}) # This is the dict keyed by question_id
+                        # --- End Corrected Access ---
+
                         for question_id, question_info in tutorial_questions.items():
                             if not isinstance(question_info, dict):
                                 continue
                             
                             question_title = question_info.get("question", f"Question {question_id}")
                             
-                            # Get question progress data
-                            q_data = user_questions.get(question_id, {})
-                            progress = q_data.get("progress", 0)
-                            status = "completed" if progress >= 2 else "in_progress" if progress >= 1 else "not_started"
-                            status_emoji = "✅" if status == "completed" else "🟠" if status == "in_progress" else "🔴"
+                            # Get question progress data using the correct dictionary
+                            q_data = user_questions_progress.get(question_id, {})
+
+                            # --- Corrected Status Logic ---
+                            # Determine status based on both status field and competency_level
+                            status = q_data.get("status", "not_started")
+                            competency_level = q_data.get("competency_level", 0)
+
+                            # If competency_level is 2 (full understanding), treat as completed
+                            if competency_level >= 2:
+                                status = "completed"
+
+                            status_emoji = get_status_emoji(status)
+                            # --- End Corrected Status Logic ---
+
                             attempts = q_data.get("attempts", 0)
                             
                             # Create columns for status, button, and question
                             col1, col2, col3 = st.columns([1, 6, 2])
                             
                             with col1:
-                                st.markdown(f"<span style='color:{'green' if status == 'completed' else 'orange' if status == 'in_progress' else 'red'}'>{status_emoji}</span>", unsafe_allow_html=True)
+                                # Use the calculated status_emoji directly
+                                status_color = 'green' if status == 'completed' else 'orange' if status == 'in_progress' else 'red'
+                                st.markdown(f"<span style='color:{status_color}'>{status_emoji}</span>", unsafe_allow_html=True)
                             
                             with col3:
                                 # Create link to assessor with query parameters
