@@ -14,12 +14,6 @@ def render_sidebar(module_title: str) -> None:
         st.write(f"Module: {module_title}")
         
         st.markdown("---")
-        st.header("Debug Settings")
-        debug_mode = st.toggle("Enable Debug Mode", key="debug_mode")
-        if debug_mode:
-            st.info("Debug mode is enabled. You'll see detailed information about the chat history and API calls.")
-        
-        st.markdown("---")
         st.header("Tips for Learning")
         st.info("""
         **Socratic Method Tips:**
