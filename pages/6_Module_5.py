@@ -15,7 +15,7 @@ def load_module_data():
         data = get_cached_modules_data()
         if "modules" in data and isinstance(data["modules"], list):
             # Find the module with the specific title
-            target_title = "Large Kit - Reactors" # Corrected title
+            target_title = "Large Kit: Reactors and Reaction Kinetics" # Corrected title
             for module in data["modules"]:
                 if module.get("title") == target_title:
                     return module

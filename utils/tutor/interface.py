@@ -730,7 +730,7 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
                             if not isinstance(question_info, dict):
                                 continue
                             
-                            question_title = question_info.get("question", f"Question {question_id}")
+                            question_title = question_info.get("label", f"Question {question_id}")
                             
                             # Get question progress data using the correct dictionary
                             q_data = user_questions_progress.get(question_id, {})

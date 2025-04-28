@@ -22,7 +22,7 @@ def get_modules_data():
     try:
         client = get_mongo_client()
         db = client["funce_db"]
-        modules_collection = db["modules"]
+        modules_collection = db["modules_live"]
         
         # Get all modules
         modules_data = [x for x in modules_collection.find({})]
@@ -114,7 +114,7 @@ def get_module_by_id(module_id):
     """
     client = get_mongo_client()
     db = client["funce_db"]
-    modules_collection = db["modules"]
+    modules_collection = db["modules_live"]
     
     # Get the module
     module_data = modules_collection.find_one({"modules": {"$elemMatch": {"_id": module_id}}})

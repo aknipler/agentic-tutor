@@ -10,11 +10,11 @@ COMPETENCY_LEVELS = {
 # Module titles mapping
 MODULE_TITLES = {
     "1": "Introduction to Chemical Engineering",
-    "2": "Graphical Process Diagrams",
-    "3": "Small Kit - Sensors and Valves",
-    "4": "Medium Kit - Unit Operations",
-    "5": "Large Kit - Reactors",
-    "6": "Thermodynamic Cycles"
+    "2": "Schematics",
+    "3": "Small Kit: Sensors and Valves",
+    "4": "Medium Kit: Tanks, Separators, Heat Exchangers and Boilers",
+    "5": "Large Kit: Reactors and Reaction Kinetics",
+    "6": "Large Kit: Thermodynamic Cycles"
 }
 
 class TutorConfig:

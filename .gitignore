@@ -3,3 +3,5 @@
 .github/
 *.pyc
 .DS_Store
+module_data*
+question_data*

@@ -13,9 +13,10 @@ def load_module_data():
     """Load module information from cache"""
     try:
         data = get_cached_modules_data()
+        print(f"[Module 2] Data: {data}")
         if "modules" in data and isinstance(data["modules"], list):
             # Find the module with the specific title
-            target_title = "Graphical Process Diagrams"
+            target_title = "Schematics"
             for module in data["modules"]:
                 if module.get("title") == target_title:
                     return module
@@ -37,7 +38,7 @@ def main():
     # Render the tutor interface
     render_tutor_interface(
         module_id="2",
-        module_title=module_data.get("title", "Graphical Process Diagrams"),
+        module_title=module_data.get("title", "Schematics"),
         module_description=module_data.get("description", ""),
         topics=module_data.get("topics", []),
         file_id=st.session_state.get("module_2_file_id")

@@ -135,7 +135,7 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
         question_index = 0
         print(f"[WARNING] Could not convert question_id '{question_id}' to index. Using 0.")
     
-    question_text = question_info.get("question", f"Question {question_id}")
+    question_text = question_info.get("label", f"Question {question_id}")
     
     # Get and prepare question progress first
     if module_progress is None:

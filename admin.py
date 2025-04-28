@@ -68,7 +68,7 @@ def update_module_vector_store(module_title: str, vector_store_id: str) -> bool:
     try:
         client = get_mongo_client()
         db = client["funce_db"]
-        modules_collection = db["modules"]
+        modules_collection = db["modules_live"]
         
         # Print the module title and vector store ID
         print(f"Updating module '{module_title}' with vector store ID '{vector_store_id}'")

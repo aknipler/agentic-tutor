@@ -134,11 +134,11 @@ def overview():
     # Define the correct order of modules based on micro-competencies.md
     module_order = [
         "Introduction to Chemical Engineering",
-        "Graphical Process Diagrams",
-        "Small Kit - Sensors and Valves",
-        "Medium Kit - Unit Operations",
-        "Large Kit - Reactors",
-        "Thermodynamic Cycles"
+        "Schematics",
+        "Small Kit: Sensors and Valves",
+        "Medium Kit: Tanks, Separators, Heat Exchangers and Boilers",
+        "Large Kit: Reactors and Reaction Kinetics",
+        "Large Kit: Thermodynamic Cycles"
     ]
     
     # Create a mapping of module titles to their data
@@ -169,10 +169,10 @@ def overview():
         if isinstance(tutorial_questions, list):
             for i, question in enumerate(tutorial_questions):
                 # Use the index+1 as a string for the question_id
-                question_id = str(i + 1)
-                tutorial_questions_dict[question_id] = {
+                tutorial_questions_dict[i] = {
                     "question": question.get("question", ""),
-                    "expected_answer": question.get("expected_answer", "")
+                    "expected_answer": question.get("expected_answer", ""),
+                    'label': question.get('label', '')
                 }
         else:
             tutorial_questions_dict = tutorial_questions
@@ -204,7 +204,7 @@ def overview():
         module_status = get_status_from_progress(module_progress)
         
         # Create an expander for each module (all collapsed by default)
-        with st.expander(f"Module {module_index + 1}: {module_title} {get_status_emoji(module_status)}", expanded=False):
+        with st.expander(f"Module {module_index}: {module_title} {get_status_emoji(module_status)}", expanded=False):
             # Display progress bar
             st.progress(module_progress / 2)
             
@@ -250,7 +250,7 @@ def overview():
                         continue
                     
                     # Get question title
-                    question_title = question_info.get("question", f"Question {question_id}")
+                    question_title = question_info.get("label", f"Question {question_id}")
                     
                     # Get question progress from the new structure
                     q_data = questions_progress.get(question_id, {})
