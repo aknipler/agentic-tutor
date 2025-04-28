@@ -64,10 +64,6 @@ def overview():
     # Show user ID
     st.sidebar.info(f"Logged in as: {st.session_state.user_id}")
     
-    # Debug toggle in sidebar
-    with st.sidebar:
-        st.session_state['debug_mode'] = st.checkbox("Debug Mode", value=False)  # Set to False by default
-    
     # Add a help section at the top
     with st.expander("ℹ️ How to Use FunCE Learning Assistant"):
         st.markdown("""
