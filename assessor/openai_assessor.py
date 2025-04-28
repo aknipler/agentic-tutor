@@ -18,7 +18,8 @@ def assess_answer(
     answer: str,
     expected_answer: str,
     image_data_list: Optional[List[bytes]] = None,
-    model: str = "gpt-4o-mini"
+    model: str = "gpt-4o-mini",
+    success_criteria: str = ""
 ) -> Dict:
     """
     Assess a student's answer using OpenAI API
@@ -29,6 +30,7 @@ def assess_answer(
         expected_answer: The expected/model answer text
         image_data_list: Optional list of image bytes for images the student uploaded
         model: The OpenAI model to use for assessment
+        success_criteria: The success criteria for the question (optional)
         
     Returns:
         Dictionary containing assessment results:
@@ -65,6 +67,9 @@ Provide a competency level (0, 1, or 2) and constructive feedback. Use the follo
 Format your response strictly as:
 Competency Level: [level]
 Feedback: [feedback]"""
+
+    # Add success criteria to the context if provided
+    success_criteria_text = f"\n\nSuccess Criteria: {success_criteria}" if success_criteria else ""
 
     # Build user submission content (Student Answer + Images)
     user_submission_content = [
@@ -104,7 +109,7 @@ Feedback: [feedback]"""
 Context for Assessment:
 Question: {question}
 
-Expected Answer: {expected_answer}"""
+Expected Answer: {expected_answer}{success_criteria_text}"""
         messages.append({"role": "system", "content": system_prompt})
 
         # User message combining student answer and images
@@ -139,7 +144,7 @@ Expected Answer: {expected_answer}"""
 
         # Reset defaults for parsing
         competency_level = 0
-        feedback = "No feedback provided." # Default feedback
+        feedback = "No feedback provided."
 
         # --- Revised Feedback Extraction --- 
         try:

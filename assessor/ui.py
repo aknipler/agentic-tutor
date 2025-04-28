@@ -135,7 +135,8 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
         question_index = 0
         print(f"[WARNING] Could not convert question_id '{question_id}' to index. Using 0.")
     
-    question_text = question_info.get("label", f"Question {question_id}")
+    question_text = question_info.get("question", f"Question {question_id}")
+    question_label = question_info.get("label", f"Question {question_id}")
     
     # Get and prepare question progress first
     if module_progress is None:
@@ -161,9 +162,15 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
         }
     
     # Use lazy loading with expander
-    with st.expander(f"{status_emoji} {question_text}", expanded=False):
+    with st.expander(f"{status_emoji} {question_label}", expanded=False):
         # Display the question
         st.write(question_text)
+        
+        # Display question image if available
+        question_image_url = question_info.get("question_image_url")
+        print(f"[DEBUG] question_image_url: {question_image_url}")
+        if question_image_url:
+            st.image(question_image_url, caption="Question Image")
         
         st.write(f"Status: {status_emoji} | Attempts: {attempts}")
         
@@ -208,12 +215,13 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
                         question=question_text,
                         answer=answer.strip() if answer.strip() else "No text answer provided. Please refer to the uploaded solution(s).",
                         expected_answer=expected_answer_text,
-                        image_data_list=image_data_list
+                        image_data_list=image_data_list,
+                        success_criteria=question_info.get("success_criteria", "")
                     )
 
                     save_assessment_results(
                         user_id=user_id,
-                        module_id=module_id,
+                        module_id=str(int(module_id)+1),
                         question_index=question_index,
                         competency_level=assessment["competency_level"],
                         feedback=assessment["feedback"],
@@ -239,6 +247,11 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
                         }.get(assessment["competency_level"], "Unknown")
                         st.write(f"Competency Level: {competency_text}")
                         st.write(f"Feedback: {assessment['feedback']}")
+                        
+                        # Display answer image if available
+                        answer_image_url = question_info.get("answer_image_url")
+                        if answer_image_url:
+                            st.image(answer_image_url, caption="Answer Image")
                     
                     # st.rerun()
             else:

@@ -11,7 +11,6 @@ def initialize_session():
 # Initialize session
 initialize_session()
 
-
 # Initialize session state
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False

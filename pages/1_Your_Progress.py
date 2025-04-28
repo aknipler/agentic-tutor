@@ -169,7 +169,7 @@ def overview():
         if isinstance(tutorial_questions, list):
             for i, question in enumerate(tutorial_questions):
                 # Use the index+1 as a string for the question_id
-                tutorial_questions_dict[i] = {
+                tutorial_questions_dict[str(int(i)+1)] = {
                     "question": question.get("question", ""),
                     "expected_answer": question.get("expected_answer", ""),
                     'label': question.get('label', '')
@@ -194,6 +194,7 @@ def overview():
         
         # Count completed tutorial questions
         for q_id in tutorial_questions_dict.keys():
+            print(f"Getting {q_id} from questions_progress")
             q_data = questions_progress.get(q_id, {})
             # Check both status and competency_level
             if q_data.get("status") == "completed" or q_data.get("competency_level", 0) >= 2:

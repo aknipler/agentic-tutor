@@ -43,7 +43,8 @@ for module_num, module_group in module_df.groupby('Module Number'):
             'expected_answer': qrow['Expected answer'],
             'success_criteria': qrow['Success criteria'],
             'agent_context': qrow['Further information required in prompt'],
-            'image_url': qrow['Link to Images']
+            'question_image_url': qrow['question_URL'],
+            'answer_image_url': qrow['answer_URL']
             # Add any extra fields here if present
         }
         module_doc['tutorial_questions'].append(question)
