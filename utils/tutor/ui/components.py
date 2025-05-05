@@ -14,14 +14,6 @@ def render_sidebar(module_title: str) -> None:
         st.write(f"Module: {module_title}")
         
         st.markdown("---")
-        st.header("Tips for Learning")
-        st.info("""
-        **Socratic Method Tips:**
-        - Try to explain concepts in your own words
-        - When stuck, ask specific questions
-        - Connect new concepts to what you already know
-        - Don't be afraid to make mistakes - they're part of learning!
-        """)
 
 def render_chat_history(chat_history: List[Dict[str, Any]]) -> None:
     """Render the chat history with proper message formatting"""
