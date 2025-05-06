@@ -66,7 +66,10 @@ Provide a competency level (0, 1, or 2) and constructive feedback. Use the follo
 
 Format your response strictly as:
 Competency Level: [level]
-Feedback: [feedback]"""
+Feedback: [feedback]
+
+Be generous with you compency level rating. When it is unclear if the student has partial understanding or full understanding, give them the benefit of the doubt and give them a full competency level.
+"""
 
     # Add success criteria to the context if provided
     success_criteria_text = f"\n\nSuccess Criteria: {success_criteria}" if success_criteria else ""

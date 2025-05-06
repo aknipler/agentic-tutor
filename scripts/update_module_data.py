@@ -9,7 +9,7 @@ from mongodb.connectors.base import get_mongo_client
 
 # 1. Read CSVs
 module_df = pd.read_csv('module_data.csv')
-question_df = pd.read_csv('question_data.csv')
+question_df = pd.read_csv('question_data_final.csv')
 
 # 2. Clean and normalize data (strip whitespace, fillna, etc.)
 module_df = module_df.fillna('')
