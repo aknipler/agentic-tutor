@@ -635,6 +635,15 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
                     ).to_dict()
                     TutorState.add_message(str(module_id), initial_message)
                     
+                    # Log the initial question
+                    if "user_id" in st.session_state:
+                        logger.log_conversation(
+                            st.session_state.user_id,
+                            str(module_id),
+                            current_topic['name'],
+                            [["", response.output_text]]  # Empty user message since this is the initial question
+                        )
+                    
                     print(f"[Tutor Interface] Added initial question to chat history. Current chat history length: {len(st.session_state[chat_history_key])}")
                 except Exception as e:
                     print(f"[Tutor Interface Error] Failed to generate initial question: {str(e)}")
