@@ -16,11 +16,15 @@ from .handlers.competency import (
 )
 from .ui.components import render_sidebar, render_chat_history, render_progress_summary
 from mongodb.connectors import get_modules_data, get_user_progress, update_competency
+from mongodb.logger import UserLogger
 from utils.cache import get_cached_modules_data, invalidate_modules_cache
 from assessor.utils import get_status_emoji
 
 # Base URL for the application
 BASE_URL = "http://localhost:8502/"
+
+# Initialize logger
+logger = UserLogger()
 
 def invalidate_caches():
     """Invalidate all cached data when updates occur"""
@@ -464,6 +468,22 @@ def get_bot_response(user_input: str, module: Union[str, int], file_id: Optional
                 if transition_message.get("initial_question"):
                     text_placeholder.markdown(transition_message["initial_question"])
                 
+                # Log the conversation before returning
+                if "user_id" in st.session_state:
+                    logger.log_conversation(
+                        st.session_state.user_id,
+                        str(module),
+                        topic_name,
+                        [[user_input, transition_message["congratulations"]]]
+                    )
+                    if transition_message.get("initial_question"):
+                        logger.log_conversation(
+                            st.session_state.user_id,
+                            str(module),
+                            topic_name,
+                            [["", transition_message["initial_question"]]]
+                        )
+                
                 # Return combined message for backward compatibility
                 return transition_message["congratulations"] + "\n\n" + (transition_message.get("initial_question") or "")
             else:
@@ -474,6 +494,16 @@ def get_bot_response(user_input: str, module: Union[str, int], file_id: Optional
                 })
                 # Display the transition message in the UI
                 text_placeholder.markdown(transition_message)
+                
+                # Log the conversation before returning
+                if "user_id" in st.session_state:
+                    logger.log_conversation(
+                        st.session_state.user_id,
+                        str(module),
+                        topic_name,
+                        [[user_input, transition_message]]
+                    )
+                
                 return transition_message
         
         # Create new message with topic information for our internal state
@@ -486,6 +516,15 @@ def get_bot_response(user_input: str, module: Union[str, int], file_id: Optional
         
         # Add to chat history using TutorState
         TutorState.add_message(str(module), new_message.to_dict())
+        
+        # Log the conversation
+        if "user_id" in st.session_state:
+            logger.log_conversation(
+                st.session_state.user_id,
+                str(module),
+                topic_name,
+                [[user_input, response_text]]
+            )
         
         return response_text
         

@@ -9,6 +9,7 @@ from .data import (
     get_assessment_results
 )
 from mongodb.connectors import get_mongo_client
+from mongodb.logger import UserLogger
 from .file_handler import save_uploaded_file, get_file_url
 from .openai_assessor import assess_answer
 from datetime import datetime
@@ -16,6 +17,9 @@ from datetime import datetime
 # Initialize session state for pagination if not exists
 if "question_page" not in st.session_state:
     st.session_state.question_page = 1
+
+# Initialize logger
+logger = UserLogger()
 
 def get_question_assessment_results(user_id: str, module_id: str, question_index: int) -> Optional[Dict]:
     """Get assessment results for a specific question"""
@@ -217,6 +221,15 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
                         expected_answer=expected_answer_text,
                         image_data_list=image_data_list,
                         success_criteria=question_info.get("success_criteria", "")
+                    )
+
+                    # Log the submission
+                    logger.log_submission(
+                        user_id=user_id,
+                        module=str(module_id),
+                        question=question_text,
+                        submission=answer.strip() if answer.strip() else "No text answer provided. Please refer to the uploaded solution(s).",
+                        grade=assessment["competency_level"] / 2  # Convert to 0-1 scale
                     )
 
                     save_assessment_results(
