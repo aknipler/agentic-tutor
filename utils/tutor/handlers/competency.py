@@ -335,6 +335,8 @@ def get_next_non_competent_topic(module_id: Union[str, int]) -> Optional[Dict[st
             
         topics = module_data.get("topics", [])
         print(f"[Next Topic] Found topics for module: {topics}")
+
+        
         
         if not topics:
             print(f"[Next Topic Error] No topics found for module: {target_title}")
@@ -368,10 +370,17 @@ def get_next_non_competent_topic(module_id: Union[str, int]) -> Optional[Dict[st
             print(f"[Next Topic] Topic progress: {progress}")
             
             if progress < 2:  # Not completed
+                # get the question from the module data. First get attribute index module data with the module index
+                module_topics = module_data.get("topics", [])
+                for topic in module_topics:
+                    if topic.get("name") == topic_name:
+                        question = topic.get("question", "")
+                        break
                 result = {
                     "name": topic_name,
                     "progress": progress,
-                    "status": topic_data.get("status", "not_started")
+                    "status": topic_data.get("status", "not_started"),
+                    "question": question
                 }
                 print(f"[Next Topic] Found non-competent topic: {result}")
                 return result

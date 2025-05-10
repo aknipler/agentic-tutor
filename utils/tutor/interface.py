@@ -342,14 +342,14 @@ def handle_competency_update_transition(tool_call: Dict[str, Any], module: Union
                     {f'Topic description: {topic_description}' if topic_description else ''}
                     
                     Your task is to:
-                    1. Begin with a direct, engaging question that immediately focuses on the core concept of the topic
-                    2. The question should be specific and practical, relating to real-world chemical engineering applications
-                    3. Avoid generic introductions or small talk - get straight to the topic
-                    4. Make the question challenging but approachable, encouraging critical thinking
-                    5. If possible, include a brief real-world scenario or example to make the question more concrete
+                    1. Begin with the given direct, engaging question that immediately focuses on the core concept of the topic
+                    2. Avoid generic introductions or small talk - get straight to the given question
+
+                    Given question: {next_topic['question']}
                     
-                    Generate your response as a single, focused Socratic question that will start the discussion. Do not include any introductory text or explanations - just the question itself."""
+                    Generate your response as a single, focused Socratic question that will start the discussion. Do not include any introductory text or explanations - just the given question itself."""
                     
+                    print(f"Given question: {next_topic['question']}")
                     print(f"[Topic Transition] Generating initial question for new topic: {next_topic['name']}")
                     response = client.responses.create(
                         model=TutorConfig.MODEL_NAME,
@@ -606,17 +606,16 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
                     client = setup_openai_client()
                     current_topic = st.session_state["current_topic"]
                     topic_description = current_topic.get('description', '')
-                    initial_prompt = f"""You are starting a new topic: {current_topic['name']}
+                    initial_prompt = f"""You are starting a new topic: {next_topic['name']}
                     {f'Topic description: {topic_description}' if topic_description else ''}
                     
                     Your task is to:
-                    1. Begin with a direct, engaging question that immediately focuses on the core concept of the topic
-                    2. The question should be specific and practical, relating to real-world chemical engineering applications
-                    3. Avoid generic introductions or small talk - get straight to the topic
-                    4. Make the question challenging but approachable, encouraging critical thinking
-                    5. If possible, include a brief real-world scenario or example to make the question more concrete
+                    1. Begin with the given direct, engaging question that immediately focuses on the core concept of the topic
+                    2. Avoid generic introductions or small talk - get straight to the given question
+
+                    Given question: {next_topic['question']}
                     
-                    Generate your response as a single, focused Socratic question that will start the discussion. Do not include any introductory text or explanations - just the question itself."""
+                    Generate your response as a single, focused Socratic question that will start the discussion. Do not include any introductory text or explanations - just the given question itself."""
                     
                     print(f"[Tutor Interface] Generating initial question for topic: {current_topic['name']}")
                     response = client.responses.create(
