@@ -37,10 +37,10 @@ def main():
     # Render the tutor interface
     render_tutor_interface(
         module_id="4",
-        module_title=module_data.get("title", "Medium Kit - Unit Operations"), # Corrected default title
+        module_title=module_data.get("title", "Heat Transfer"),
         module_description=module_data.get("description", ""),
         topics=module_data.get("topics", []),
-        file_id=st.session_state.get("module_4_file_id")
+        vector_store_id=st.module_data.get("vector_store_id")
     )
 
 if __name__ == "__main__":

@@ -40,7 +40,7 @@ def main():
         module_title=module_data.get("title", "Introduction to Chemical Engineering"),
         module_description=module_data.get("description", ""),
         topics=module_data.get("topics", []),
-        file_id=st.session_state.get("module_1_file_id")
+        vector_store_id=module_data.get("vector_store_id")
     )
 
 if __name__ == "__main__":

@@ -81,13 +81,6 @@ def setup_openai_client() -> openai.OpenAI:
         st.session_state["openai_client"] = client
     return st.session_state["openai_client"]
 
-def clean_file_id(file_id: Optional[str]) -> Optional[str]:
-    """Clean the file ID by removing any non-printable characters and extra whitespace."""
-    if not file_id:
-        return None
-    cleaned_id = ''.join(char for char in file_id if char.isprintable()).strip()
-    return cleaned_id
-
 def handle_function_call(tool_call: Dict[str, Any], user_id: str) -> Optional[str]:
     """Handle function calls from the AI response"""
     func_name = tool_call["name"]
@@ -114,7 +107,7 @@ def handle_topic_transition() -> Optional[str]:
                 del st.session_state["topic_transition_time"]
     return None
 
-def prepare_tools_configuration(module: Union[str, int]) -> List[Dict[str, Any]]:
+def prepare_tools_configuration(vector_store_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """Prepare the tools configuration for the AI response"""
     tools = [
         {
@@ -143,15 +136,14 @@ def prepare_tools_configuration(module: Union[str, int]) -> List[Dict[str, Any]]
         }
     ]
 
-    vector_store_key = f"vector_store_id_{module}"
-    if vector_store_key in st.session_state:
-        vector_store_id = st.session_state[vector_store_key]
-        if vector_store_id:
-            tools.append({
-                "type": "file_search",
-                "vector_store_ids": [vector_store_id]
-            })
-    
+    print(f"[Vector Store ID] Vector store ID: {vector_store_id}")
+    if vector_store_id:
+        print(f"[Vector Store] Adding vector store {vector_store_id} to tools configuration")
+        tools.append({
+            "type": "file_search",
+            "vector_store_ids": [vector_store_id]
+        })
+
     return tools
 
 def prepare_conversation_context(module: Union[str, int], topic_name: str) -> Tuple[List[Dict[str, Any]], Optional[str]]:
@@ -172,22 +164,13 @@ def prepare_conversation_context(module: Union[str, int], topic_name: str) -> Tu
     
     return conversation_context, previous_response_id
 
-def format_input_content(conversation_context: List[Dict[str, Any]], user_input: str, file_id: Optional[str] = None) -> List[Dict[str, Any]]:
+def format_input_content(conversation_context: List[Dict[str, Any]], user_input: str) -> List[Dict[str, Any]]:
     """Format the input content for the AI response"""
     input_content = []
     
     # Get current topic for context
     current_topic = TutorState.get_current_topic()
     current_topic_name = current_topic.get("name", "") if current_topic else ""
-    
-    # Always include file context if available
-    if file_id:
-        cleaned_file_id = clean_file_id(file_id)
-        if cleaned_file_id:
-            input_content.append({
-                "role": "system",
-                "content": [{"type": "input_file", "file_id": cleaned_file_id}]
-            })
     
     # Add conversation history with topic context
     for message in conversation_context:
@@ -381,7 +364,7 @@ def handle_competency_update_transition(tool_call: Dict[str, Any], module: Union
     
     return None
 
-def get_bot_response(user_input: str, module: Union[str, int], file_id: Optional[str] = None, stream: bool = True) -> str:
+def get_bot_response(user_input: str, module: Union[str, int], stream: bool = True, vector_store_id: Optional[str] = None) -> str:
     """Get a response from the tutor bot and track competencies using function calling"""
     try:
         # Check for topic transition
@@ -399,7 +382,7 @@ def get_bot_response(user_input: str, module: Union[str, int], file_id: Optional
         system_prompt = load_tutor_prompt()
         
         # Prepare tools configuration
-        tools = prepare_tools_configuration(module)
+        tools = prepare_tools_configuration(vector_store_id)
         
         # Get current topic and prepare conversation context
         current_topic = TutorState.get_current_topic()
@@ -419,7 +402,7 @@ def get_bot_response(user_input: str, module: Union[str, int], file_id: Optional
         print(f"[Debug] Conversation context length: {len(conversation_context)}")
         
         # Format input content without topic_name field for API compatibility
-        input_content = format_input_content(conversation_context, user_input, file_id)
+        input_content = format_input_content(conversation_context, user_input)
         
         # Add topic context to system prompt instead of in the input messages
         topic_description = current_topic.get('description', '')
@@ -532,7 +515,7 @@ def get_bot_response(user_input: str, module: Union[str, int], file_id: Optional
         print(f"[Error] Error in get_bot_response: {str(e)}")
         return f"An error occurred: {str(e)}"
 
-def render_tutor_interface(module_id: Union[str, int], module_title: str, module_description: str, topics: List[Any], file_id: Optional[str] = None) -> None:
+def render_tutor_interface(module_id: Union[str, int], module_title: str, module_description: str, topics: List[Any], vector_store_id: Optional[str] = None) -> None:
     """Render the tutor interface for a specific module"""
     try:
         st.title(f"Module {module_id}: {module_title}")
@@ -540,16 +523,8 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
         
         # Initialize vector store ID in session state if not exists
         vector_store_key = f"vector_store_id_{module_id}"
-        if vector_store_key not in st.session_state:
-            modules_data = get_cached_modules_data()
-            module_id_str = str(module_id)
-            if "modules" in modules_data and isinstance(modules_data["modules"], list):
-                for m in modules_data["modules"]:
-                    if m.get("title") == MODULE_TITLES.get(module_id_str):
-                        vector_store_id = m.get("vector_store_id")
-                        if vector_store_id:
-                            st.session_state[vector_store_key] = vector_store_id
-                        break
+        if vector_store_id and vector_store_key not in st.session_state:
+            st.session_state[vector_store_key] = vector_store_id
         
         with st.expander("ℹ️ About the AI Tutor", expanded=False):
             st.write("""
@@ -694,7 +669,7 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
                 try:
                     # Get and display assistant response
                     with st.chat_message("assistant"):
-                        response = get_bot_response(prompt, module_id, file_id, stream=True)
+                        response = get_bot_response(prompt, module_id, stream=True, vector_store_id=vector_store_id)
                         # The response is already displayed via the placeholder in get_bot_response
                     
                     # Reset the current prompt
