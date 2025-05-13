@@ -13,6 +13,7 @@ from mongodb.logger import UserLogger
 from .file_handler import save_uploaded_file, get_file_url
 from .openai_assessor import assess_answer
 from datetime import datetime
+import os
 
 # Initialize session state for pagination if not exists
 if "question_page" not in st.session_state:
@@ -20,6 +21,10 @@ if "question_page" not in st.session_state:
 
 # Initialize logger
 logger = UserLogger()
+
+# Define image directory paths
+QUESTION_IMAGES_DIR = "knowledge/images/questions"
+ANSWER_IMAGES_DIR = "knowledge/images/answers"
 
 def get_question_assessment_results(user_id: str, module_id: str, question_index: int) -> Optional[Dict]:
     """Get assessment results for a specific question"""
@@ -171,10 +176,16 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
         st.write(question_text)
         
         # Display question image if available
-        question_image_url = question_info.get("question_image_url")
-        print(f"[DEBUG] question_image_url: {question_image_url}")
-        if question_image_url:
-            st.image(question_image_url, caption="Question Image")
+        # Old implementation using URLs (commented out)
+        # question_image_url = question_info.get("question_image_url")
+        # print(f"[DEBUG] question_image_url: {question_image_url}")
+        # if question_image_url:
+        #     st.image(question_image_url, caption="Question Image")
+        
+        # New implementation using local images
+        question_image_path = os.path.join(QUESTION_IMAGES_DIR, f"{question_label}.png")
+        if os.path.exists(question_image_path):
+            st.image(question_image_path, caption="Question Image")
         
         st.write(f"Status: {status_emoji} | Attempts: {attempts}")
         
@@ -262,9 +273,15 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
                         st.write(f"Feedback: {assessment['feedback']}")
                         
                         # Display answer image if available
-                        answer_image_url = question_info.get("answer_image_url")
-                        if answer_image_url:
-                            st.image(answer_image_url, caption="Answer Image")
+                        # Old implementation using URLs (commented out)
+                        # answer_image_url = question_info.get("answer_image_url")
+                        # if answer_image_url:
+                        #     st.image(answer_image_url, caption="Answer Image")
+                        
+                        # New implementation using local images
+                        answer_image_path = os.path.join(ANSWER_IMAGES_DIR, f"{question_label}.png")
+                        if os.path.exists(answer_image_path):
+                            st.image(answer_image_path, caption="Answer Image")
                     
                     # st.rerun()
             else:
