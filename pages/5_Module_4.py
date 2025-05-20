@@ -40,7 +40,7 @@ def main():
         module_title=module_data.get("title", "Heat Transfer"),
         module_description=module_data.get("description", ""),
         topics=module_data.get("topics", []),
-        vector_store_id=st.module_data.get("vector_store_id")
+        vector_store_id=module_data.get("vector_store_id")
     )
 
 if __name__ == "__main__":
