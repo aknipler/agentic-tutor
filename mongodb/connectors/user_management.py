@@ -14,7 +14,7 @@ def verify_user_login(login_code):
     """
     try:
         client = get_mongo_client()
-        db = client["funce_db"]
+        db = client[st.secrets["MONGODB_DATABASE_NAME"]]
         users_collection = db["users"]
         
         # Check if user exists
@@ -43,7 +43,7 @@ def create_user(login_code, name=""):
     """
     try:
         client = get_mongo_client()
-        db = client["funce_db"]
+        db = client[st.secrets["MONGODB_DATABASE_NAME"]]
         users_collection = db["users"]
         
         # Check if user already exists
@@ -81,11 +81,11 @@ def get_or_create_default_users():
     """
     try:
         client = get_mongo_client()
-        db = client["funce_db"]
+        db = client[st.secrets["MONGODB_DATABASE_NAME"]]
         users_collection = db["users"]
         
         # Default login codes
-        default_login_codes = ["FUNCE001", "FUNCE002", "FUNCE003"]
+        default_login_codes = ["PRQ001", "PRQ002", "PRQ003"]
         
         # Check if users collection is empty
         if users_collection.count_documents({}) == 0:

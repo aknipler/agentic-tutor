@@ -10,12 +10,8 @@ def connect_to_mongodb():
     secrets = st.secrets
     
     # Get MongoDB credentials and connection string
-    username = secrets["MONGODB_USERNAME"]
-    password = secrets["MONGODB_PASSWORD"]
     connection_string = secrets["MONGODB_CONNECTION_STRING"]
     
-    # Replace the password placeholder in the connection string
-    connection_string = connection_string.replace("<db_password>", password)
     
     # Create MongoDB client
     client = pymongo.MongoClient(connection_string)
@@ -92,7 +88,7 @@ def transform_user_progress_data(progress_data):
 def main():
     # Connect to MongoDB
     client = connect_to_mongodb()
-    db = client['funce_db']
+    db = client[st.secrets["MONGODB_DATABASE_NAME"]]
     
     # Load data files
     data_dir = Path(__file__).parent.parent / 'data'

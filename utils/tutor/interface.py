@@ -5,7 +5,7 @@ import json
 from typing import Optional, Dict, Any, Union, List, Tuple
 from datetime import datetime
 
-from .config.settings import TutorConfig, MODULE_TITLES
+from .config.settings import TutorConfig
 from .models.chat import ChatMessage
 from .state import TutorState
 from .handlers.competency import (
@@ -18,6 +18,7 @@ from .ui.components import render_sidebar, render_chat_history, render_progress_
 from mongodb.connectors import get_modules_data, get_user_progress, update_competency
 from mongodb.logger import UserLogger
 from utils.cache import get_cached_modules_data, invalidate_modules_cache
+from utils.modules import find_module_by_index
 from assessor.utils import get_status_emoji
 
 # Base URL for the application
@@ -73,6 +74,45 @@ def load_tutor_prompt() -> str:
     except Exception as e:
         st.error(f"Error loading tutor prompt: {str(e)}")
         return "Error loading tutor prompt. Please check if the file exists."
+
+def build_initial_topic_prompt(topic: Dict[str, Any]) -> str:
+    """Build the prompt used to generate a topic's opening Socratic question.
+
+    Lecturer-supplied topics may or may not include an explicit diagnostic
+    `question` field. The PRQ week_*.json modules only carry `name` +
+    `description`, so this must not assume `question` exists (a direct
+    `topic['question']` access crashes the whole topic flow).
+
+    When a `question` is present we steer the tutor to open with it; when it is
+    absent we ask the tutor to craft an opening question from the topic name and
+    description instead.
+    """
+    topic_name = topic.get("name", "")
+    topic_description = topic.get("description", "")
+    given_question = topic.get("question", "")
+
+    description_line = f"Topic description: {topic_description}" if topic_description else ""
+
+    if given_question:
+        return f"""You are starting a new topic: {topic_name}
+{description_line}
+
+Your task is to:
+1. Begin with the given direct, engaging question that immediately focuses on the core concept of the topic
+2. Avoid generic introductions or small talk - get straight to the given question
+
+Given question: {given_question}
+
+Generate your response as a single, focused Socratic question that will start the discussion. Do not include any introductory text or explanations - just the given question itself."""
+
+    return f"""You are starting a new topic: {topic_name}
+{description_line}
+
+Your task is to:
+1. Craft a single direct, engaging question that immediately focuses on the core concept of this topic, grounded in the topic description above
+2. Avoid generic introductions or small talk - get straight to a substantive diagnostic question
+
+Generate your response as a single, focused Socratic question that will start the discussion. Do not include any introductory text or explanations - just the question itself."""
 
 def setup_openai_client() -> openai.OpenAI:
     """Set up and return the OpenAI client"""
@@ -320,19 +360,9 @@ def handle_competency_update_transition(tool_call: Dict[str, Any], module: Union
                 # Generate initial Socratic question for the new topic
                 try:
                     client = setup_openai_client()
-                    topic_description = next_topic.get('description', '')
-                    initial_prompt = f"""You are starting a new topic: {next_topic['name']}
-                    {f'Topic description: {topic_description}' if topic_description else ''}
-                    
-                    Your task is to:
-                    1. Begin with the given direct, engaging question that immediately focuses on the core concept of the topic
-                    2. Avoid generic introductions or small talk - get straight to the given question
+                    initial_prompt = build_initial_topic_prompt(next_topic)
 
-                    Given question: {next_topic['question']}
-                    
-                    Generate your response as a single, focused Socratic question that will start the discussion. Do not include any introductory text or explanations - just the given question itself."""
-                    
-                    print(f"Given question: {next_topic['question']}")
+                    print(f"Given question: {next_topic.get('question', '(none - generated from topic description)')}")
                     print(f"[Topic Transition] Generating initial question for new topic: {next_topic['name']}")
                     response = client.responses.create(
                         model=TutorConfig.MODEL_NAME,
@@ -528,9 +558,9 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
         
         with st.expander("ℹ️ About the AI Tutor", expanded=False):
             st.write("""
-            **Welcome to AI-Chris, your Socratic Chemical Engineering Tutor**
+            **Welcome to your Socratic AI Tutor**
             
-            AI-Chris will help you learn chemical engineering concepts through guided questioning rather than giving direct answers.
+            The AI Tutor will help you learn engineering concepts through guided questioning rather than giving direct answers.
             This approach helps develop critical thinking and deeper understanding of the subject.
             
             **Competency Levels:**
@@ -539,8 +569,8 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
             - ✅ Completed
             
             **How to Use:**
-            1. AI-Chris will focus on one topic at a time
-            2. Answer AI-Chris's questions to demonstrate understanding
+            1. The AI Tutor will focus on one topic at a time
+            2. Answer the AI Tutor's questions to demonstrate understanding
             3. Once you show mastery of a topic, we'll move to the next one
             """)
         
@@ -580,18 +610,8 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
                 try:
                     client = setup_openai_client()
                     current_topic = st.session_state["current_topic"]
-                    topic_description = current_topic.get('description', '')
-                    initial_prompt = f"""You are starting a new topic: {next_topic['name']}
-                    {f'Topic description: {topic_description}' if topic_description else ''}
-                    
-                    Your task is to:
-                    1. Begin with the given direct, engaging question that immediately focuses on the core concept of the topic
-                    2. Avoid generic introductions or small talk - get straight to the given question
+                    initial_prompt = build_initial_topic_prompt(current_topic)
 
-                    Given question: {next_topic['question']}
-                    
-                    Generate your response as a single, focused Socratic question that will start the discussion. Do not include any introductory text or explanations - just the given question itself."""
-                    
                     print(f"[Tutor Interface] Generating initial question for topic: {current_topic['name']}")
                     response = client.responses.create(
                         model=TutorConfig.MODEL_NAME,
@@ -644,7 +664,7 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
         with chat_container:
             # Add a divider before the chat
             st.markdown("---")
-            st.subheader("Chat with AI-Chris")
+            st.subheader("Chat with the AI Tutor")
             
             # Initialize session state for current prompt if not exists
             if "current_prompt" not in st.session_state:
@@ -723,16 +743,10 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
             
             # Get tutorial questions for the current module
             modules_data = get_cached_modules_data()
-            if "modules" in modules_data and isinstance(modules_data["modules"], list):
-                module_data = None
-                target_title = MODULE_TITLES.get(str(module_id))
-                
-                if target_title:
-                    for m in modules_data["modules"]:
-                        if m.get("title") == target_title:
-                            module_data = m
-                            break
-                
+            if modules_data:
+                # Locate the module by its index, never by title.
+                module_data = find_module_by_index(modules_data, module_id)
+
                 if module_data:
                     tutorial_questions = module_data.get("tutorial_questions", {})
                     if isinstance(tutorial_questions, list):

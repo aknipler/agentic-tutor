@@ -1,5 +1,6 @@
-.streamlit/
+.streamlit/secrets.toml
 .venv/
+.env
 .github/
 *.pyc
 .DS_Store

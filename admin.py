@@ -67,7 +67,7 @@ def update_module_vector_store(module_title: str, vector_store_id: str) -> bool:
     """Update a module's vector store ID in MongoDB."""
     try:
         client = get_mongo_client()
-        db = client["funce_db"]
+        db = client[st.secrets["MONGODB_DATABASE_NAME"]]
         modules_collection = db["modules_live"]
         
         # Print the module title and vector store ID

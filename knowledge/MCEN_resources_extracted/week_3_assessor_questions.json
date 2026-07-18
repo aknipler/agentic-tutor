@@ -1,0 +1,122 @@
+{
+    "_id": {
+        "$oid": "6879a1030000000000000003"
+    },
+    "title": "Week 3 - ANOVA and Gauge Repeatability and Reproducibility",
+    "topics": [
+        {
+            "name": "ANOVA Purpose and Selection",
+            "description": "Explain ANOVA and select one-way, two-way, or higher-order models for categorical predictors and a continuous response."
+        },
+        {
+            "name": "One-Way ANOVA Hypotheses",
+            "description": "Identify response, factor, treatment levels, sample size, significance level, and formulate null and alternative hypotheses."
+        },
+        {
+            "name": "ANOVA Table Interpretation",
+            "description": "Interpret sources, degrees of freedom, sums of squares, mean squares, F-statistics, and p-values."
+        },
+        {
+            "name": "Statistical Conclusions and Post-Hoc Analysis",
+            "description": "State valid reject or insufficient-evidence conclusions and recognise that significant ANOVA results require follow-up comparisons to identify differing groups."
+        },
+        {
+            "name": "Residual Analysis and Model Adequacy",
+            "description": "Assess normality, constant variance, independence, outliers, patterns, omitted factors, interactions, and transformations before accepting ANOVA conclusions."
+        },
+        {
+            "name": "Two-Way ANOVA and Interactions",
+            "description": "Interpret main effects and interactions for two categorical predictors."
+        },
+        {
+            "name": "Measurement Error Decomposition",
+            "description": "Explain observed variation as a combination of process or part variation and measurement-system variation."
+        },
+        {
+            "name": "Accuracy, Bias, Resolution and Precision",
+            "description": "Distinguish closeness to a reference, systematic offset, display discrimination, and closeness of repeated measurements."
+        },
+        {
+            "name": "Repeatability, Reproducibility, Stability and Linearity",
+            "description": "Identify within-condition, between-condition, time-dependent, and operating-range components of measurement performance."
+        },
+        {
+            "name": "Gauge R&R Study Design",
+            "description": "Design a crossed study using representative parts, multiple operators, and repeated randomised measurements."
+        },
+        {
+            "name": "Gauge R&R Metrics",
+            "description": "Interpret variance components, percent contribution, percent study variation, percent tolerance, P/TV, percent R&R, and number of distinct categories."
+        },
+        {
+            "name": "Gauge R&R Decision-Making",
+            "description": "Determine whether a measurement system is suitable for inspection and process control and recommend improvements."
+        }
+    ],
+    "tutorial_questions": [
+        {
+            "question_id": "3.1",
+            "question": "Define accuracy, bias, precision, repeatability, reproducibility, stability, linearity, and resolution. State why each matters in quality control.",
+            "expected_answer": "Accuracy is closeness of a measurement or average measurement to an accepted reference; it matters because inaccurate measurements cause incorrect conformance decisions. Bias is the systematic difference between the average measured value and the reference; it matters because it shifts all decisions in one direction. Precision is closeness of repeated measurements to each other, regardless of truth; it matters because imprecise results obscure real process changes. Repeatability is variation when the same operator measures the same part repeatedly with the same instrument and method; it quantifies equipment or within-condition variation. Reproducibility is variation caused by changes in operator, instrument, laboratory, fixture, or other conditions; it determines consistency across users or setups. Stability is change in bias or variation over time; it determines whether earlier calibration or R&R conclusions remain valid. Linearity is change in bias or precision across the measurement range; it determines whether one calibration behaviour applies over the full range. Resolution is the smallest increment the system can display or distinguish; inadequate resolution prevents detection of meaningful part or process differences."
+        },
+        {
+            "question_id": "3.2",
+            "question": "Which items are essential parts of a crossed Gauge R&R study: part-to-part variation, tool wear over a year, measurement stability, operator reproducibility, and equipment repeatability? Explain.",
+            "expected_answer": "The essential crossed Gauge R&R components are part-to-part variation, operator reproducibility, and equipment repeatability. Representative parts provide the real variation the system must distinguish; multiple operators quantify between-operator differences; repeated measurements under the same conditions quantify repeatability. Long-term tool wear and measurement stability are important measurement-system concerns, but they are normally evaluated through stability studies or repeated Gauge R&R studies over time rather than being the primary components of one short crossed R&R experiment."
+        },
+        {
+            "question_id": "3.3",
+            "question": "A measurement device displays only 15.0, 15.2, and 15.4 mm across a tolerance from 14.5 to 15.5 mm. Identify the main measurement-system concern and explain why four lines of resolution may be inadequate.",
+            "expected_answer": "The main concern is inadequate resolution or discrimination. A 1.0 mm tolerance represented by only about four to six possible displayed levels gives too few categories to distinguish meaningful part-to-part variation or small process shifts. Quantisation can make different parts appear identical, distort control charts and capability estimates, and cause borderline parts to be classified unreliably. A common practical aim is at least about ten distinct increments across the tolerance or process variation, with the final requirement based on risk and application."
+        },
+        {
+            "question_id": "3.4",
+            "question": "Formulate the hypotheses for a one-way ANOVA comparing mean tensile strength from five carbon-fibre percentages. State the response, factor, levels, and a suitable significance level.",
+            "expected_answer": "Response: measured tensile strength, a continuous variable. Factor: carbon-fibre percentage, a categorical predictor for the experiment. Levels: the five tested percentages. Null hypothesis H0: μ1=μ2=μ3=μ4=μ5. Alternative hypothesis H1: at least one population mean tensile strength differs. A commonly selected significance level is α=0.05, which should be stated before examining the result."
+        },
+        {
+            "question_id": "3.5",
+            "question": "An ANOVA table reports factor DF=4, SS=22,739, MS=5,684.8, F=15.00, p<0.001; error DF=20, SS=7,578, MS=378.9. Interpret the table and state the statistical conclusion at α=0.05.",
+            "expected_answer": "The factor has 4 degrees of freedom, consistent with five groups. Its sum of squares represents variation explained by differences between group means. The error sum of squares represents within-group or unexplained variation. Mean square is SS/DF. The F-statistic is 5,684.8/378.9≈15.0, so explained variation is much larger than residual variation. Because p<0.001<0.05, reject H0 and conclude that there is statistically significant evidence that at least one population mean differs. The ANOVA alone does not identify which means differ; post-hoc comparisons are required."
+        },
+        {
+            "question_id": "3.6",
+            "question": "A one-way ANOVA gives p=0.32 at α=0.05. Write a statistically correct conclusion and explain what must not be claimed.",
+            "expected_answer": "Because p=0.32 is greater than α=0.05, there is insufficient evidence to reject the null hypothesis of equal population means. The result should not be described as proving, accepting, or confirming that all means are equal. A non-significant result may reflect genuinely small differences, high within-group variation, insufficient sample size, poor measurement quality, or an inadequate model."
+        },
+        {
+            "question_id": "3.7",
+            "question": "Residual plots from an ANOVA show a curved pattern versus fitted values, increasing spread at larger fitted values, and a downward trend in observation order. What concerns do these patterns raise and what actions are appropriate?",
+            "expected_answer": "The curved pattern suggests missing nonlinear structure, an omitted factor or interaction, or an incorrect model form. Increasing spread indicates non-constant variance. The trend in observation order indicates loss of independence through drift, degradation, environmental change, or another time-related effect. Appropriate actions are to investigate engineering causes and data order, add relevant factors or interactions, consider a suitable transformation such as log or Box-Cox, model time or blocks where justified, and repeat or redesign the experiment if needed. Conclusions from the original p-values should not be accepted until model adequacy is restored."
+        },
+        {
+            "question_id": "3.8",
+            "question": "A two-way ANOVA for crack rate uses firing frequency and environmental condition. Both main effects have p<0.001 and the interaction has p<0.001. Explain how the interaction changes interpretation.",
+            "expected_answer": "A significant interaction means the effect of firing frequency depends on environmental condition, or equivalently the environmental effect depends on frequency. The main effects cannot be interpreted as universal average changes without reference to the interaction. The response should be examined using an interaction plot and simple effects or pairwise comparisons at specific combinations. Engineering decisions should avoid combinations associated with high crack rate rather than selecting frequency and environment independently."
+        },
+        {
+            "question_id": "3.9",
+            "question": "In a Gauge R&R ANOVA, the p-values are: part <0.001, operator=0.002, and part×operator=0.341. Interpret each result.",
+            "expected_answer": "Part p<0.001 indicates real differences among the selected parts and shows that the measurement system detects part-to-part variation. Operator p=0.002 indicates a statistically significant difference between operator averages, suggesting reproducibility bias, training, method, fixture, or calibration differences. Part×operator p=0.341 provides insufficient evidence of an interaction, so operators appear to measure the pattern of parts consistently; one operator is not uniquely high or low on particular parts. Practical magnitude must still be assessed using variance components and R&R metrics, not p-values alone."
+        },
+        {
+            "question_id": "3.10",
+            "question": "A Gauge R&R report gives total Gage R&R=1.67% of study variation, 1.82% of tolerance, and 84 distinct categories. Assess the measurement system.",
+            "expected_answer": "The measurement system is very good. Total Gage R&R of 1.67% of study variation is below the competency guide's 2% 'good' threshold, and 1.82% of tolerance is well below 10%. Eighty-four distinct categories is far above the minimum of 10 for good discrimination. Measurement error is therefore small relative to both process variation and tolerance, so the system is suitable for process monitoring and inspection, assuming accuracy, stability, and representativeness are also satisfactory."
+        },
+        {
+            "question_id": "3.11",
+            "question": "A width Gauge R&R study reports P/TV=17.99%, %R&R=22.62%, and number of distinct categories=2. Classify the system and recommend improvements.",
+            "expected_answer": "The system is not acceptable for reliable quality control. P/TV of about 18% lies in the 10-30% 'bad' range for inspection. %R&R of about 22.6% is well above the 9% unacceptable threshold for detecting process shifts. Only two distinct categories is below five and shows very poor discrimination. Improvements may include a higher-resolution and more repeatable instrument, improved fixturing and measurement location definition, calibration, operator training and standard work, environmental control, equipment maintenance, and removal of operator or part×operator causes. The study should then be repeated with representative parts and randomised runs."
+        },
+        {
+            "question_id": "3.12",
+            "question": "Design a standard crossed Gauge R&R study for a dimensional measurement. Include parts, operators, repeats, total runs, randomisation, and part selection.",
+            "expected_answer": "Use 10 representative parts covering the expected process range, including parts near both specification limits where safely available. Use 3 operators who normally perform the measurement. Each operator measures every part 3 times, giving 10×3×3=90 measurements. Runs should be randomised so operators do not measure parts in a predictable sequence, and operators should be blinded to previous readings. Use the normal instrument, fixture, method, and environmental conditions, while recording operator, part, repeat, and measurement. The design estimates part-to-part variation, repeatability, reproducibility, and part×operator interaction."
+        }
+    ],
+    "vector_store_id": "vs_week3_anova_gage_rr",
+    "index": {
+        "$numberInt": "2"
+    }
+}

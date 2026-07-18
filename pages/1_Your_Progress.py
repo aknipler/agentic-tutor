@@ -1,5 +1,6 @@
 import streamlit as st
 from mongodb.connectors import get_user_progress, update_user_progress, get_modules_data
+from utils.modules import sort_modules_by_index
 from datetime import datetime
 
 BASE_URL = "http://localhost:8501/"
@@ -65,7 +66,7 @@ def overview():
     st.sidebar.info(f"Logged in as: {st.session_state.user_id}")
     
     # Add a help section at the top
-    with st.expander("ℹ️ How to Use FunCE Learning Assistant"):
+    with st.expander("ℹ️ How to Use the Learning Assistant"):
         st.markdown("""
         ### How to Use This Learning Assistant
         
@@ -127,27 +128,11 @@ def overview():
         st.warning("No modules data available. Please make sure the modules are properly set up in MongoDB.")
         return
     
-    # Define the correct order of modules based on micro-competencies.md
-    module_order = [
-        "Introduction to Chemical Engineering",
-        "Schematics",
-        "Small Kit: Sensors and Valves",
-        "Medium Kit: Tanks, Separators, Heat Exchangers and Boilers",
-        "Large Kit: Reactors and Reaction Kinetics",
-        "Large Kit: Thermodynamic Cycles"
-    ]
-    
-    # Create a mapping of module titles to their data
-    module_map = {module.get("title"): module for module in modules_data["modules"]}
-    
-    # Sort modules according to the defined order
-    sorted_modules = []
-    for title in module_order:
-        if title in module_map:
-            sorted_modules.append(module_map[title])
-        else:
-            st.warning(f"Module '{title}' not found in database")
-    
+    # Order modules by their `index` field. Whichever modules have been loaded
+    # are the ones shown, so releasing a new week needs no change here.
+    sorted_modules = sort_modules_by_index(modules_data)
+
+
     # Display modules in main content area
     for module_info in sorted_modules:
         # Get module index and title

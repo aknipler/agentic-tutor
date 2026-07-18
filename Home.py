@@ -19,7 +19,7 @@ if "user_id" not in st.session_state:
     st.session_state.user_id = None
 
 # Title and introduction
-st.title("Welcome to the FunCE Bot Learning Assistant!")
+st.title("Welcome to the Probability, Reliability and Quality (MCEN90059) Bot Learning Assistant!")
 
 # Create default users if not already created
 default_codes = get_or_create_default_users()
@@ -36,7 +36,7 @@ with st.form("login_form"):
             if verify_user_login(login_code):
                 st.session_state.logged_in = True
                 st.session_state.user_id = login_code
-                st.success(f"Login successful! Welcome to FunCE Bot.")
+                st.success(f"Login successful! Welcome to the PRQ Bot.")
                 st.rerun()
             else:
                 st.error("Invalid login code. Please try again.")
@@ -83,7 +83,7 @@ if st.session_state.logged_in:
     This Learning Assistant enables you to handwrite answers to the tute questions and upload a photo. The OCR technology then has the capability of reading these files and transforming them into text which can be analysed by the AI/ GPT assessor. The applications of this technology are limitless. For example, a normal processing plant can have hundreds of different P&ID's which can be very detailed and complex. The OCR technology could be utilised to analyse and assess these P&ID and provide feedback to engineers, greatly improving their workflow on sometimes monotonous/ strenuous tasks (reading over hundreds if not thousands of P&ID's). This would help free up a lot of the work capacity for engineers and allow them to focus more on the critical thinking side of engineering (making the job more enjoyable!).
 
     ### Practice for Exams
-    As you approach your first round of chemical engineering exams, the questions set by subject coordinators like Chris are often novel problems (which you haven't come across) used to assess your critical thinking, rather than your ability to memorise formulas and answers to tute questions. This Learning Assistant and Assessor is set up in a way that you can improve your critical thinking and helps you break down problems well and answer them clearly.
+    As you approach your exams, the questions set by subject coordinators are often novel problems (which you haven't come across) used to assess your critical thinking, rather than your ability to memorise formulas and answers to tute questions. This Learning Assistant and Assessor is set up in a way that you can improve your critical thinking and helps you break down problems well and answer them clearly.
 
     It can also be hard to mark yourself honestly when you complete practice questions, the assessor allows you to get feedback on how you are approaching questions and your level of understanding of each topic - giving you more confidence as you approach the exam.
     """)
@@ -95,7 +95,7 @@ if st.session_state.logged_in:
         st.rerun()
 else:
     st.markdown("""
-    Please login with your assigned code to access the FunCE Bot Learning Assistant. 
+    Please login with your assigned code to access the PRQ Bot Learning Assistant. 
     If you don't have a login code, please contact your instructor.
     """)
 

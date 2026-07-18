@@ -11,9 +11,7 @@ def get_mongo_client():
     """
     try:
         # Get connection details from secrets
-        username = st.secrets["MONGODB_USERNAME"]
-        password = st.secrets["MONGODB_PASSWORD"]
-        connection_string = st.secrets["MONGODB_CONNECTION_STRING"].replace("<db_password>", password)
+        connection_string = st.secrets["MONGODB_CONNECTION_STRING"]
         
         # Connect to MongoDB
         client = pymongo.MongoClient(connection_string)

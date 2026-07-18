@@ -17,7 +17,7 @@ def get_user_progress(user_id="user123"):
     """
     try:
         client = get_mongo_client()
-        db = client["funce_db"]
+        db = client[st.secrets["MONGODB_DATABASE_NAME"]]
         user_progress_collection = db["user_module_progress"]
         
         # Get user progress
@@ -102,7 +102,7 @@ def update_user_progress(user_id, module_id, topic_id=None, question_id=None, pr
         print(f"[DEBUG] Progress: {progress}, Status: {status}, Attempts: {attempts}")
         
         client = get_mongo_client()
-        db = client["funce_db"]
+        db = client[st.secrets["MONGODB_DATABASE_NAME"]]
         user_progress_collection = db["user_module_progress"]
         
         # Check if document exists for this user
@@ -253,7 +253,7 @@ def update_competency(user_id, topic_name, level):
             st.write(f"Debug: Starting competency update for user {user_id}, topic {topic_name}, level {level}")
         
         client = get_mongo_client()
-        db = client["funce_db"]
+        db = client[st.secrets["MONGODB_DATABASE_NAME"]]
         user_progress_collection = db["user_module_progress"]
         
         # Map level directly to status
@@ -352,7 +352,7 @@ def get_topic_competency(user_id, topic_name):
             st.write(f"Debug: Fetching competency for user {user_id}, topic {topic_name}")
         
         client = get_mongo_client()
-        db = client["funce_db"]
+        db = client[st.secrets["MONGODB_DATABASE_NAME"]]
         user_progress_collection = db["user_module_progress"]
         
         # Get modules data to find which module contains this topic
@@ -450,7 +450,7 @@ def batch_update_user_progress(user_id: str, updates: List[Dict[str, Any]]) -> b
     """
     try:
         client = get_mongo_client()
-        db = client["funce_db"]
+        db = client[st.secrets["MONGODB_DATABASE_NAME"]]
         user_progress_collection = db["user_module_progress"]
         
         # Group updates by module for efficient processing
@@ -545,7 +545,7 @@ def create_user_progress(user_id: str) -> bool:
     """
     try:
         client = get_mongo_client()
-        db = client["funce_db"]
+        db = client[st.secrets["MONGODB_DATABASE_NAME"]]
         user_progress_collection = db["user_module_progress"]
         users_collection = db["users"]
         
@@ -632,7 +632,7 @@ def list_users() -> List[Dict]:
     """
     try:
         client = get_mongo_client()
-        db = client["funce_db"]
+        db = client[st.secrets["MONGODB_DATABASE_NAME"]]
         user_progress_collection = db["user_module_progress"]
         
         # Get all users
@@ -678,7 +678,7 @@ def delete_user(user_id: str) -> bool:
     """
     try:
         client = get_mongo_client()
-        db = client["funce_db"]
+        db = client[st.secrets["MONGODB_DATABASE_NAME"]]
         
         # Delete from user_module_progress collection
         progress_result = db["user_module_progress"].delete_many({"user_id": user_id})
@@ -705,7 +705,7 @@ def get_user_progress_details(user_id: str) -> Dict:
     """
     try:
         client = get_mongo_client()
-        db = client["funce_db"]
+        db = client[st.secrets["MONGODB_DATABASE_NAME"]]
         user_progress_collection = db["user_module_progress"]
         
         # Get all user progress entries for this user
@@ -774,7 +774,7 @@ def save_assessment_results(user_id: str, module_id: str, question_index: int,
         question_id = str(int(question_index) + 1)
         
         client = get_mongo_client()
-        db = client["funce_db"]
+        db = client[st.secrets["MONGODB_DATABASE_NAME"]]
         progress_collection = db["user_module_progress"]
 
         # Convert image bytes to BSON Binary format
@@ -876,7 +876,7 @@ def get_assessment_results(user_id: str, module_id: str, question_index: int) ->
         question_id = str(int(question_index) + 1)
         
         client = get_mongo_client()
-        db = client["funce_db"]
+        db = client[st.secrets["MONGODB_DATABASE_NAME"]]
         progress_collection = db["user_module_progress"]
         
         # Find the user's progress document
@@ -921,7 +921,7 @@ def get_module_data(user_id: str, module_id: str) -> Dict:
     """
     try:
         client = get_mongo_client()
-        db = client["funce_db"]
+        db = client[st.secrets["MONGODB_DATABASE_NAME"]]
         
         # Get user progress document
         user_doc = db["user_module_progress"].find_one({"user_id": user_id})
