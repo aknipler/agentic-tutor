@@ -21,72 +21,32 @@ def get_modules_data():
     print("[get_modules_data] Retrieving modules data")  # Only logs on actual DB fetch
     try:
         client = get_mongo_client()
-        db = client["funce_db"]
+        db = client[st.secrets["MONGODB_DATABASE_NAME"]]
         modules_collection = db["modules_live"]
         
         # Get all modules
         modules_data = [x for x in modules_collection.find({})]
         
         if not modules_data:
-            # Create sample modules data if none exists
-            sample_modules = {
-                "modules": [
-                    {
-                        "title": "Introduction to Chemical Engineering",
-                        "vector_store_id": "module1",
-                        "topics": [
-                            {
-                                "name": "Introduction to Chemical Engineering Principles",
-                                "description": "Basic concepts of chemical engineering and their applications"
-                            },
-                            {
-                                "name": "Material Balances",
-                                "description": "Fundamental principles of material balances in chemical processes"
-                            },
-                            {
-                                "name": "Energy Balances",
-                                "description": "Understanding energy conservation and transformation in chemical systems"
-                            }
-                        ],
-                        "tutorial_questions": {
-                            "1.1": {
-                                "question": "Calculate a simple material balance",
-                                "difficulty": "medium"
-                            },
-                            "1.2": {
-                                "question": "Apply energy balance to a chemical reactor",
-                                "difficulty": "hard"
-                            }
-                        }
-                    },
-                    {
-                        "title": "Thermodynamics",
-                        "vector_store_id": "module2",
-                        "topics": [
-                            {
-                                "name": "Laws of Thermodynamics",
-                                "description": "First and second laws of thermodynamics and their applications"
-                            },
-                            {
-                                "name": "Phase Equilibria",
-                                "description": "Understanding phase behavior in chemical systems"
-                            }
-                        ],
-                        "tutorial_questions": {
-                            "2.1": {
-                                "question": "Calculate entropy change in a process",
-                                "difficulty": "medium"
-                            }
-                        }
-                    }
-                ]
-            }
-            
-            # Insert sample data
-            modules_collection.insert_one(sample_modules)
-            st.info("Initialized modules database with sample data")
-            modules_data = [sample_modules]
-        
+            # An empty collection is a setup problem, not something to paper over.
+            # This used to insert FunCE sample data, which silently seeded the live
+            # PRQ database with chemical-engineering modules. Report instead.
+            db_name = st.secrets["MONGODB_DATABASE_NAME"]
+            print(
+                f"[get_modules_data] No documents in {db_name}.modules_live - "
+                "the collection is empty."
+            )
+            st.error(
+                f"No modules found in the database (`{db_name}.modules_live`).\n\n"
+                "This usually means the module data hasn't been loaded yet. "
+                "Load it with:\n\n"
+                "`python scripts/load_week_json.py --commit`\n\n"
+                "If you expected data to be there, check that "
+                "`MONGODB_DATABASE_NAME` in `.streamlit/secrets.toml` points at the "
+                "right database."
+            )
+            return {"modules": []}
+
         # Ensure the data has the correct structure
         if isinstance(modules_data, list):
             modules_data = {"modules": modules_data}
@@ -113,7 +73,7 @@ def get_module_by_id(module_id):
         dict: A dictionary containing the module data.
     """
     client = get_mongo_client()
-    db = client["funce_db"]
+    db = client[st.secrets["MONGODB_DATABASE_NAME"]]
     modules_collection = db["modules_live"]
     
     # Get the module
@@ -184,7 +144,7 @@ def get_question_details(module_num, question_num):
     
     # Connect to MongoDB
     client = get_mongo_client()
-    db = client["FunCE"]
+    db = client[st.secrets["MONGODB_DATABASE_NAME"]]
     questions_collection = db["questions"]
     
     # Query the database
@@ -221,7 +181,7 @@ def get_module_topics(module_num):
     
     # Connect to MongoDB
     client = get_mongo_client()
-    db = client["FunCE"]
+    db = client[st.secrets["MONGODB_DATABASE_NAME"]]
     questions_collection = db["questions"]
     
     # Query the database for all questions in the module
@@ -242,7 +202,7 @@ def get_all_modules():
     """
     # Connect to MongoDB
     client = get_mongo_client()
-    db = client["FunCE"]
+    db = client[st.secrets["MONGODB_DATABASE_NAME"]]
     modules_collection = db["modules"]
     questions_collection = db["questions"]
     
@@ -267,16 +227,13 @@ def get_all_modules():
         
         result[module_title] = module_topics
     
-    # If no modules were found, return placeholder data
+    # No modules found: report it rather than returning invented placeholder data
+    # (this used to hand back a fake FunCE module).
     if not result:
-        return {
-            "Introduction": {
-                "Introduction to Chemical Engineering Fundamentals": '✅',
-                "Principles of Material Balances": '✅',
-                "Thermodynamics in Chemical Processes": '🟠',
-                "Fluid Flow Operations": '🟠',
-                "Process Safety & Ethics": '🔴',
-            }
-        }
-    
+        print(
+            "[get_all_modules] No documents in the legacy 'modules'/'questions' "
+            "collections. Note the live app reads 'modules_live' instead."
+        )
+        return {}
+
     return result 
