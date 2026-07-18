@@ -1,0 +1,118 @@
+{
+    "_id": {
+        "$oid": "6879a1010000000000000001"
+    },
+    "title": "Week 1 - Probability, Reliability and Quality",
+    "topics": [
+        {
+            "name": "Definition of Reliability",
+            "description": "Explain reliability as the probability that a product or system performs its required function for a specified duration under stated or standard operating conditions."
+        },
+        {
+            "name": "Fundamental Reliability Functions",
+            "description": "Interpret cumulative probability of failure F(t) and reliability R(t)=1-F(t), including their expected changes with time."
+        },
+        {
+            "name": "Rated Life and Reliability Decisions",
+            "description": "Use rated life and acceptable reliability or failure probability to support maintenance, inspection, service, and replacement decisions."
+        },
+        {
+            "name": "Reliability Requirements and Escapes",
+            "description": "Write a reliability requirement containing probability, time or actuations, and operating conditions, and identify premature failures as potential escapes."
+        },
+        {
+            "name": "Failure Types Across the Life Cycle",
+            "description": "Distinguish early-life, normal-life, and end-of-life failures and relate them to manufacturing defects, random shocks, and degradation mechanisms."
+        },
+        {
+            "name": "Definition and Dimensions of Quality",
+            "description": "Explain quality engineering and apply the eight dimensions of quality: performance, features, reliability, durability, conformance, serviceability, aesthetics, and perceived quality."
+        },
+        {
+            "name": "Turnbacks and Non-Conformance",
+            "description": "Distinguish turnbacks, rework, scrap, and customer escapes in a quality system."
+        },
+        {
+            "name": "Tolerances, Scrap Rate and Yield",
+            "description": "Use lower and upper specification limits to classify units and calculate scrap rate, yield, and parts per million non-conforming."
+        },
+        {
+            "name": "Manufacturing Outcome Distributions",
+            "description": "Relate process mean and spread to specification limits and estimate the fraction of a fitted distribution expected to conform."
+        },
+        {
+            "name": "Process Potential and Capability",
+            "description": "Calculate and interpret Cp and Cpk, including the effect of process centring and variation."
+        },
+        {
+            "name": "Short-Term and Long-Term Performance",
+            "description": "Distinguish short-term capability estimates from long-term production performance and recognise the effects of drift, wear, material variation, and environmental change."
+        }
+    ],
+    "tutorial_questions": [
+        {
+            "question_id": "1.1",
+            "question": "Define product reliability. Your definition must identify the required function, operating conditions, and time period.",
+            "expected_answer": "Product reliability is the probability that a product or system performs its required function without failure for a specified duration, under specified operating or loading conditions. Reliability does not mean that failure is impossible; it quantifies the likelihood of successful operation over the stated period and conditions."
+        },
+        {
+            "question_id": "1.2",
+            "question": "A component has a cumulative probability of failure F(2 years)=0.08. Calculate its reliability at 2 years and interpret the result.",
+            "expected_answer": "R(t)=1-F(t). Therefore R(2)=1-0.08=0.92. The interpretation is that, under the stated operating conditions, 92% of comparable components are expected to remain functional at 2 years, while 8% are expected to have failed by that time."
+        },
+        {
+            "question_id": "1.3",
+            "question": "Write a complete reliability requirement for an electric pump that must have no more than a 2% probability of failure after 5,000 operating hours while pumping clean water at its rated flow and ambient temperatures from 10 °C to 40 °C.",
+            "expected_answer": "A suitable requirement is: 'The probability of failure of the electric pump shall be less than or equal to 2% at 5,000 operating hours while pumping clean water at the rated flow rate and at ambient temperatures between 10 °C and 40 °C.' Equivalently, the reliability shall be at least 98% at 5,000 hours under those conditions."
+        },
+        {
+            "question_id": "1.4",
+            "question": "A bearing is assigned a rated life of 20,000 hours at a minimum reliability of 95%. Explain how this information could be used in a maintenance plan and classify a bearing that fails at 8,000 hours.",
+            "expected_answer": "The maintenance plan may schedule inspection, servicing, or preventive replacement before 20,000 hours so the bearing is not normally operated beyond the period for which at least 95% reliability is required. A failure at 8,000 hours occurs before the rated life and is a premature reliability failure or potential reliability escape. It should be investigated for causes such as a material defect, assembly error, contamination, overload, or incorrect operating conditions."
+        },
+        {
+            "question_id": "1.5",
+            "question": "Classify each failure as early-life, normal-life, or end-of-life and justify the classification: (a) a connector fails on first use because it was crimped incorrectly; (b) a machine shaft fractures after an unexpected impact halfway through its intended life; (c) a pump seal leaks after years of progressive wear.",
+            "expected_answer": "(a) Early-life failure, because incorrect crimping is a manufacturing or assembly defect likely to appear soon after use. (b) Normal-life failure, because an unexpected impact is a random shock event that can occur during otherwise useful life. (c) End-of-life failure, because progressive seal wear is a degradation mechanism whose likelihood increases with accumulated use."
+        },
+        {
+            "question_id": "1.6",
+            "question": "Distinguish an escape from a turnback and from scrap. Give one manufacturing example of each.",
+            "expected_answer": "An escape is a defective or insufficiently reliable unit that passes the organisation's controls and reaches a later production stage or the customer; for example, a cracked housing shipped to a customer. A turnback is a non-conforming unit detected internally and returned for correction or rework; for example, a final-test failure sent back to assembly. Scrap is a non-conforming unit or material that is discarded because economical or safe recovery is not feasible; for example, an incorrectly machined casting that cannot be reworked."
+        },
+        {
+            "question_id": "1.7",
+            "question": "An online learning system is being assessed using the eight dimensions of quality. Propose one measurable indicator for each dimension.",
+            "expected_answer": "One acceptable set is: performance - median page or file response time; features - proportion of priority user-requested functions available; reliability - service uptime or failure-free session rate; durability - ability to sustain a specified peak concurrent-user load over a defined test duration; conformance - compatibility and compliance across specified browsers, operating systems, accessibility standards, and functional requirements; serviceability - median time to resolve a support incident; aesthetics - user rating of interface appearance and ergonomics; perceived quality - overall user satisfaction, trust, or reputation rating. Other well-justified measurable indicators are acceptable."
+        },
+        {
+            "question_id": "1.8",
+            "question": "A production lot contains 25,000 units. Inspection finds 175 units outside the specification limits. Calculate the sample scrap rate, yield, and non-conformance level in parts per million.",
+            "expected_answer": "Scrap rate = 175/25,000 = 0.007 = 0.7%. Yield = 1-0.007 = 0.993 = 99.3%. PPM non-conforming = 0.007×1,000,000 = 7,000 PPM."
+        },
+        {
+            "question_id": "1.9",
+            "question": "A normally distributed process has LSL=14.75 mm, USL=15.25 mm, mean μ=15.11 mm, and standard deviation σ=0.09 mm. Calculate the expected fraction outside specification, Cp, and Cpk. Interpret the results.",
+            "expected_answer": "The lower-tail z-score is (14.75-15.11)/0.09=-4.00 and the upper-tail z-score is (15.25-15.11)/0.09=1.556. The expected non-conforming fraction is approximately Φ(-4)+[1-Φ(1.556)]≈0.05994, or 5.99% (about 59,939 PPM), almost entirely above the USL. Cp=(USL-LSL)/(6σ)=0.50/0.54≈0.926. Cpk=min[(USL-μ)/(3σ),(μ-LSL)/(3σ)]=min(0.14/0.27,0.36/0.27)=0.519. Cp below 1 indicates excessive spread relative to the tolerance. The much lower Cpk shows that the mean is shifted toward the USL, so both variation reduction and re-centring are needed."
+        },
+        {
+            "question_id": "1.10",
+            "question": "For the sample 0.922, 1.073, 0.962, 0.995, 0.949, 0.915, 1.014, 0.937, 1.086, 0.910, 0.937, 0.950, 1.046, 1.050, 0.976, 0.940, 1.098, 1.083, 0.927, 0.941 with LSL=0.700 and USL=1.100, interpret the process capability report values Cp≈0.96 and Cpk≈0.55.",
+            "expected_answer": "Cp≈0.96 means the estimated within-process spread is slightly wider than the available specification range, so the process has inadequate potential capability. Cpk≈0.55 is substantially lower because the process mean is displaced toward the USL. The upper-side capability therefore limits performance. The process should first be re-centred away from the USL and then its variation reduced. The values do not support describing the process as capable."
+        },
+        {
+            "question_id": "1.11",
+            "question": "Explain why 100% final inspection does not necessarily produce zero customer escapes, and compare inspection with process improvement.",
+            "expected_answer": "Even at 100% inspection, escapes can occur because the inspection system may have limited resolution, measurement error, operator inconsistency, false acceptance, missed defects, or an unsuitable test. Inspection sorts detected good and bad units after variation has already been created and may therefore generate rework and scrap. Process improvement acts on process inputs and causes of variation so fewer defects are produced in the first place. Inspection can remain an important control, but it is not a substitute for a capable and stable process."
+        },
+        {
+            "question_id": "1.12",
+            "question": "A process is reported as Cpk=1.67 using one week of short-term data. Explain why this value alone is not sufficient evidence of long-term production quality.",
+            "expected_answer": "Cpk=1.67 indicates good short-term conformance only if the process is stable and the mean and standard deviation estimates are representative. Long-term performance may be worse because the mean or spread can change through tool wear, process drift, environmental changes, material-lot variation, ageing equipment, maintenance differences, or systematic trends. Long-term evidence therefore requires ongoing process monitoring, suitable control charts, and data covering the relevant operating conditions and time period."
+        }
+    ],
+    "vector_store_id": "vs_week1_probability_reliability_quality",
+    "index": {
+        "$numberInt": "0"
+    }
+}

@@ -5,7 +5,7 @@ from pymongo.collection import Collection
 import streamlit as st
 
 class UserLogger:
-    def __init__(self, db_name: str = "funce_logs"):
+    def __init__(self, db_name: str = "agentic_tutor_logs"):
         """
         Initialize the logger with MongoDB connection details from Streamlit secrets.
         
@@ -13,9 +13,7 @@ class UserLogger:
             db_name (str): Name of the database to use
         """
         # Get MongoDB connection details from Streamlit secrets
-        username = st.secrets["MONGODB_USERNAME"]
-        password = st.secrets["MONGODB_PASSWORD"]
-        connection_string = st.secrets["MONGODB_CONNECTION_STRING"].replace("<db_password>", password)
+        connection_string = st.secrets["MONGODB_CONNECTION_STRING"]
         
         self.client = MongoClient(connection_string)
         self.db = self.client[db_name]

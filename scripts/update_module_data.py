@@ -52,7 +52,7 @@ for module_num, module_group in module_df.groupby('Module Number'):
 
 # 4. Insert into MongoDB
 client = get_mongo_client()
-db = client['funce_db']
+db = client[st.secrets["MONGODB_DATABASE_NAME"]]
 db['modules_live'].delete_many({})  # Optional: clear old data
 db['modules_live'].insert_many(modules)
 

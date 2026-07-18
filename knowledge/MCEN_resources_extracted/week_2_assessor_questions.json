@@ -1,0 +1,92 @@
+{
+    "_id": {
+        "$oid": "6879a1020000000000000002"
+    },
+    "title": "Week 2 - Inspections and Processes",
+    "topics": [
+        {
+            "name": "Inspection Methods",
+            "description": "Compare visual inspection, go/no-go gauging, and continuous metrology by speed, cost, repeatability, information content, and suitability for process control."
+        },
+        {
+            "name": "Production Control as Feedback",
+            "description": "Explain how measured outputs are compared with desired values and corrective actions are applied, and why continuous measurement can detect trends before scrap is produced."
+        },
+        {
+            "name": "Manufacturing Data and Correlation",
+            "description": "Collect process inputs and outputs, interpret correlation matrices, and use correlation as evidence for investigation without assuming causation."
+        },
+        {
+            "name": "Production Rate, Cycle Time and Takt Time",
+            "description": "Calculate production rate and takt time and determine whether net acceptable output can satisfy customer demand."
+        },
+        {
+            "name": "Sources of Manufacturing Defects",
+            "description": "Identify defects caused by incorrect or missing parts, installation errors, equipment malfunction, material variation, contamination, handling, and excessive production speed."
+        },
+        {
+            "name": "Inspection-Centred and Process-Centred Quality",
+            "description": "Distinguish detecting defects after production from preventing defects through standard work and control of process inputs."
+        },
+        {
+            "name": "Process Maps and FMEA",
+            "description": "Construct and interpret process maps and identify FMEA elements including failure modes, effects, causes, severity, occurrence, detection, controls, and recommended actions."
+        }
+    ],
+    "tutorial_questions": [
+        {
+            "question_id": "2.1",
+            "question": "Select a useful non-destructive 100% inspection method for each case and justify the choice: (a) handmade leather wallets, 1-10 per day; (b) sheep shearing, hundreds per day; (c) smartphone screens, thousands per day.",
+            "expected_answer": "(a) For handmade wallets, detailed visual and tactile inspection is reasonable because volume is low and defects such as stitching, scratches, alignment, finish, and missing features can be checked economically; dimensional metrology may be added for critical dimensions. (b) For sheep shearing, rapid visual inspection of cuts, unshorn patches, and animal injury is appropriate, possibly supported by a simple checklist, because the output is irregular and the key defects are visible. (c) For smartphone screens, automated machine vision should inspect cracks, scratches, contamination, dead pixels, and cosmetic defects, while automated metrology or electrical/optical testing should measure dimensions, flatness, touch response, and display performance. Human visual inspection alone would be too slow and inconsistent at this volume."
+        },
+        {
+            "question_id": "2.2",
+            "question": "Compare visual inspection, go/no-go gauging, and continuous metrology. State one advantage, one limitation, and one suitable use for each.",
+            "expected_answer": "Visual inspection is fast and flexible for obvious or missing features, but it is subjective and poorly repeatable for judging the amount of a variable; it suits obvious surface damage or assembly omissions. A go/no-go gauge gives a fast, simple pass/fail decision against tolerance limits and can be automated, but it does not reveal the measured value or an approaching trend; it suits high-volume dimensional screening. Continuous metrology provides numerical measurements that reveal process level, spread, and drift and therefore supports control charts and early intervention, but it is generally more expensive and requires calibration and measurement-system control; it suits critical continuous KPIs such as diameter, thickness, or force."
+        },
+        {
+            "question_id": "2.3",
+            "question": "A go/no-go gauge rejects every oversized part. Explain why the process can still generate scrap and why the gauge alone cannot provide effective feedback control before defects occur.",
+            "expected_answer": "The gauge detects an oversized part only after that part has already been produced, so the rejected part becomes scrap or rework. Because the output is only pass/fail, the gauge does not show whether the process mean is gradually moving toward the limit while parts are still conforming. Effective early feedback requires direct numerical measurement of the KPI, plotted over time with suitable control or warning limits, so a trend can be detected and corrected before the specification limit is crossed."
+        },
+        {
+            "question_id": "2.4",
+            "question": "A line produces one unit every 42 seconds for an 8-hour shift. It has 35 minutes of planned downtime and a first-pass yield of 96%. Customer demand is 600 acceptable units per shift. Calculate the available takt time, estimated acceptable output, and determine whether demand is met.",
+            "expected_answer": "Available production time is 8×3600-35×60=26,700 s. Takt time is 26,700/600=44.5 s per acceptable unit. Gross output at a 42 s cycle time is 26,700/42≈635.7, or about 635 complete units. Expected acceptable output is 635.7×0.96≈610.3 units. The line is expected to meet demand by roughly 10 acceptable units, but the margin is small and normal variation or additional downtime could cause a shortfall."
+        },
+        {
+            "question_id": "2.5",
+            "question": "A production supervisor increases speed from 50 to 60 units per hour. Yield falls from 98% to 90%. Calculate the net acceptable production rates and assess whether the speed increase improved throughput.",
+            "expected_answer": "Before the change, net acceptable rate=50×0.98=49 acceptable units/h. After the change, net acceptable rate=60×0.90=54 acceptable units/h. Net throughput increases by 5 acceptable units/h, or about 10.2%. However, defects increase from 1 to 6 units/h, so the change also creates much more scrap or rework. A complete decision must consider quality cost, capacity at downstream rework, risk of escapes, and whether the lower yield is stable and acceptable."
+        },
+        {
+            "question_id": "2.6",
+            "question": "A correlation matrix shows correlation coefficients between product diameter Y and four inputs: oven temperature X1: 0.82; material moisture X2: -0.10; tool age X3: 0.67; operator ID encoded as a number X4: 0.05. What should the engineering team conclude and investigate?",
+            "expected_answer": "Oven temperature has the strongest linear association with diameter and tool age has a moderately strong association, so both are reasonable priorities for engineering investigation. Material moisture and the numeric operator code show weak linear correlations in this dataset. Correlation does not prove causation: temperature and tool age may be confounded with time, product mix, or each other. The team should inspect time plots, verify measurement quality, stratify by material and operator, use a physically meaningful categorical analysis for operator rather than treating ID as a continuous number, and conduct controlled trials or regression/ANOVA before making causal changes."
+        },
+        {
+            "question_id": "2.7",
+            "question": "List six common sources of defects in manufacturing or assembly and give one preventive control for each.",
+            "expected_answer": "Examples include: incorrect part - barcode or part-number verification; omitted part - poka-yoke or completion sensor; incorrect installation - fixture design, torque control, and standard work; equipment malfunction - preventive maintenance and condition monitoring; material variation - incoming material controls and supplier process capability; contamination - cleaning standards and controlled handling; handling damage - protective fixtures and packaging. Any six technically sound source-control pairs are acceptable."
+        },
+        {
+            "question_id": "2.8",
+            "question": "Contrast an inspection-centred quality strategy with a process-centred quality strategy for a drilled-hole operation.",
+            "expected_answer": "An inspection-centred strategy measures or gauges completed holes and removes non-conforming parts. It can protect the customer but does not prevent the defect and can create scrap, rework, inspection cost, and possible escapes. A process-centred strategy controls causes such as drill condition, spindle runout, feed, speed, fixture alignment, material hardness, coolant, and operator method. It uses standard procedures, preventive maintenance, direct process measurements, and statistical monitoring to keep the process stable and capable so defects are prevented rather than merely sorted."
+        },
+        {
+            "question_id": "2.9",
+            "question": "Create the main sequence and one rework loop for a process map of low-pressure die casting of an aluminium wheel, from raw material receipt to shipment.",
+            "expected_answer": "A suitable main sequence is: receive and verify aluminium alloy → store and prepare material → melt alloy → control chemistry and temperature → prepare and coat die → fill die under controlled low pressure → cool and solidify → eject casting → trim gates and flash → heat treat if required → machine critical surfaces → clean → inspect dimensions and internal integrity → finish or coat → final inspection → pack and ship. A rework loop could return a dimensionally recoverable wheel from final inspection to machining and then back to inspection. Units with non-repairable porosity, cracks, or contamination should be routed to scrap or controlled remelt rather than rework."
+        },
+        {
+            "question_id": "2.10",
+            "question": "For low-pressure die casting, complete a concise FMEA entry for the failure mode 'air trapped in the mould'. Include effect, cause, existing controls, and one recommended action.",
+            "expected_answer": "Failure mode: air trapped in the mould. Effect: internal porosity or voids, reduced structural strength, leakage, poor surface quality, or machining exposure of cavities. Likely causes: inadequate venting, excessive fill rate or turbulence, poor gating, moisture, or incorrect pressure profile. Existing controls: vent inspection and cleaning, controlled fill-pressure recipe, melt degassing, process parameter monitoring, and non-destructive inspection or proof testing. Recommended action: redesign or maintain vents and optimise the fill-pressure profile using trials, with a verified control limit for fill rate or pressure. Severity, occurrence, and detection ratings should then be assigned consistently with the organisation's FMEA scale."
+        }
+    ],
+    "vector_store_id": "vs_week2_inspections_processes",
+    "index": {
+        "$numberInt": "1"
+    }
+}
