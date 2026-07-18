@@ -7,15 +7,10 @@ COMPETENCY_LEVELS = {
     2: "✅"   # Completed
 }
 
-# Module titles mapping
-MODULE_TITLES = {
-    "1": "Introduction to Chemical Engineering",
-    "2": "Schematics",
-    "3": "Small Kit: Sensors and Valves",
-    "4": "Medium Kit: Tanks, Separators, Heat Exchangers and Boilers",
-    "5": "Large Kit: Reactors and Reaction Kinetics",
-    "6": "Large Kit: Thermodynamic Cycles"
-}
+# NOTE: there is deliberately no MODULE_TITLES mapping here. Modules are looked
+# up by their `index` field (see utils/modules.py) and their titles are read from
+# the module documents themselves, so changing the subject or adding a week needs
+# no code change.
 
 class TutorConfig:
     """Configuration class for the tutor system"""

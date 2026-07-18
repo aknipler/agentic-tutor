@@ -8,8 +8,9 @@ from mongodb.connectors import (
     get_user_progress,
     update_user_progress
 )
-from ..config.settings import COMPETENCY_LEVELS, MODULE_TITLES
+from ..config.settings import COMPETENCY_LEVELS
 from utils.cache import get_cached_modules_data
+from utils.modules import find_module_by_index
 
 def batch_update_competencies(user_id: str, updates: List[Dict[str, Any]]) -> str:
     """Batch update multiple competencies at once"""
@@ -243,31 +244,17 @@ def get_module_progress_summary(module: Union[str, int]) -> Optional[str]:
         modules_data = get_cached_modules_data()
         module_id = str(module)
         print(f"[Progress Summary] Module ID: {module_id}")
-        
-        # Get the module's topics from modules_data
-        if "modules" in modules_data and isinstance(modules_data["modules"], list):
-            # Find module by title based on module ID
-            module_data = None
-            target_title = MODULE_TITLES.get(module_id)
-            print(f"[Progress Summary] Looking for module with title: {target_title}")
-            
-            if not target_title:
-                print("[Progress Summary] No title found for module ID")
-                return None
-                
-            # Find the module with matching title
-            for m in modules_data["modules"]:
-                if m.get("title") == target_title:
-                    module_data = m
-                    break
-            
-            if module_data:
-                topics = module_data.get("topics", [])
-                print(f"[Progress Summary] Found topics for module: {topics}")
-            else:
-                print("[Progress Summary] No module data found")
-                return None
-        
+
+        # Locate the module by its index. Titles come from the lecturers' data and
+        # must never be used as lookup keys.
+        module_data = find_module_by_index(modules_data, module_id)
+        if not module_data:
+            print(f"[Progress Summary] No module found with index {module_id}")
+            return None
+
+        topics = module_data.get("topics", [])
+        print(f"[Progress Summary] Found topics for module: {topics}")
+
         # Get user's progress for this module
         module_progress = progress_data.get("modules", {}).get(str(module_data.get("index", 0)), {})
         topics_progress = module_progress.get("topics", {})
@@ -310,36 +297,18 @@ def get_next_non_competent_topic(module_id: Union[str, int]) -> Optional[Dict[st
         module_id_str = str(module_id)
         print(f"[Next Topic] Module ID string: {module_id_str}")
         
-        if "modules" not in modules_data or not isinstance(modules_data["modules"], list):
-            print(f"[Next Topic Error] Invalid modules data structure: {modules_data}")
-            return None
-            
-        # Find module by title based on module ID
-        module_data = None
-        target_title = MODULE_TITLES.get(module_id_str)
-        print(f"[Next Topic] Looking for module with title: {target_title}")
-        
-        if not target_title:
-            print(f"[Next Topic Error] No title found for module ID: {module_id_str}")
-            return None
-            
-        # Find the module with matching title
-        for m in modules_data["modules"]:
-            if m.get("title") == target_title:
-                module_data = m
-                break
-        
+        # Locate the module by its index. Titles come from the lecturers' data and
+        # must never be used as lookup keys.
+        module_data = find_module_by_index(modules_data, module_id_str)
         if not module_data:
-            print(f"[Next Topic Error] Module not found for title: {target_title}")
+            print(f"[Next Topic Error] No module found with index {module_id_str}")
             return None
-            
+
         topics = module_data.get("topics", [])
         print(f"[Next Topic] Found topics for module: {topics}")
 
-        
-        
         if not topics:
-            print(f"[Next Topic Error] No topics found for module: {target_title}")
+            print(f"[Next Topic Error] No topics found for module index {module_id_str}")
             return None
             
         # Get user's progress for this module

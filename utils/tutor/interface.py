@@ -5,7 +5,7 @@ import json
 from typing import Optional, Dict, Any, Union, List, Tuple
 from datetime import datetime
 
-from .config.settings import TutorConfig, MODULE_TITLES
+from .config.settings import TutorConfig
 from .models.chat import ChatMessage
 from .state import TutorState
 from .handlers.competency import (
@@ -18,6 +18,7 @@ from .ui.components import render_sidebar, render_chat_history, render_progress_
 from mongodb.connectors import get_modules_data, get_user_progress, update_competency
 from mongodb.logger import UserLogger
 from utils.cache import get_cached_modules_data, invalidate_modules_cache
+from utils.modules import find_module_by_index
 from assessor.utils import get_status_emoji
 
 # Base URL for the application
@@ -557,9 +558,9 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
         
         with st.expander("ℹ️ About the AI Tutor", expanded=False):
             st.write("""
-            **Welcome to AI-Chris, your Socratic Chemical Engineering Tutor**
+            **Welcome to your Socratic AI Tutor**
             
-            AI-Chris will help you learn chemical engineering concepts through guided questioning rather than giving direct answers.
+            The AI Tutor will help you learn engineering concepts through guided questioning rather than giving direct answers.
             This approach helps develop critical thinking and deeper understanding of the subject.
             
             **Competency Levels:**
@@ -568,8 +569,8 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
             - ✅ Completed
             
             **How to Use:**
-            1. AI-Chris will focus on one topic at a time
-            2. Answer AI-Chris's questions to demonstrate understanding
+            1. The AI Tutor will focus on one topic at a time
+            2. Answer the AI Tutor's questions to demonstrate understanding
             3. Once you show mastery of a topic, we'll move to the next one
             """)
         
@@ -663,7 +664,7 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
         with chat_container:
             # Add a divider before the chat
             st.markdown("---")
-            st.subheader("Chat with AI-Chris")
+            st.subheader("Chat with the AI Tutor")
             
             # Initialize session state for current prompt if not exists
             if "current_prompt" not in st.session_state:
@@ -742,16 +743,10 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
             
             # Get tutorial questions for the current module
             modules_data = get_cached_modules_data()
-            if "modules" in modules_data and isinstance(modules_data["modules"], list):
-                module_data = None
-                target_title = MODULE_TITLES.get(str(module_id))
-                
-                if target_title:
-                    for m in modules_data["modules"]:
-                        if m.get("title") == target_title:
-                            module_data = m
-                            break
-                
+            if modules_data:
+                # Locate the module by its index, never by title.
+                module_data = find_module_by_index(modules_data, module_id)
+
                 if module_data:
                     tutorial_questions = module_data.get("tutorial_questions", {})
                     if isinstance(tutorial_questions, list):
