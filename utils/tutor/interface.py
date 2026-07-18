@@ -74,6 +74,45 @@ def load_tutor_prompt() -> str:
         st.error(f"Error loading tutor prompt: {str(e)}")
         return "Error loading tutor prompt. Please check if the file exists."
 
+def build_initial_topic_prompt(topic: Dict[str, Any]) -> str:
+    """Build the prompt used to generate a topic's opening Socratic question.
+
+    Lecturer-supplied topics may or may not include an explicit diagnostic
+    `question` field. The PRQ week_*.json modules only carry `name` +
+    `description`, so this must not assume `question` exists (a direct
+    `topic['question']` access crashes the whole topic flow).
+
+    When a `question` is present we steer the tutor to open with it; when it is
+    absent we ask the tutor to craft an opening question from the topic name and
+    description instead.
+    """
+    topic_name = topic.get("name", "")
+    topic_description = topic.get("description", "")
+    given_question = topic.get("question", "")
+
+    description_line = f"Topic description: {topic_description}" if topic_description else ""
+
+    if given_question:
+        return f"""You are starting a new topic: {topic_name}
+{description_line}
+
+Your task is to:
+1. Begin with the given direct, engaging question that immediately focuses on the core concept of the topic
+2. Avoid generic introductions or small talk - get straight to the given question
+
+Given question: {given_question}
+
+Generate your response as a single, focused Socratic question that will start the discussion. Do not include any introductory text or explanations - just the given question itself."""
+
+    return f"""You are starting a new topic: {topic_name}
+{description_line}
+
+Your task is to:
+1. Craft a single direct, engaging question that immediately focuses on the core concept of this topic, grounded in the topic description above
+2. Avoid generic introductions or small talk - get straight to a substantive diagnostic question
+
+Generate your response as a single, focused Socratic question that will start the discussion. Do not include any introductory text or explanations - just the question itself."""
+
 def setup_openai_client() -> openai.OpenAI:
     """Set up and return the OpenAI client"""
     if "openai_client" not in st.session_state:
@@ -320,19 +359,9 @@ def handle_competency_update_transition(tool_call: Dict[str, Any], module: Union
                 # Generate initial Socratic question for the new topic
                 try:
                     client = setup_openai_client()
-                    topic_description = next_topic.get('description', '')
-                    initial_prompt = f"""You are starting a new topic: {next_topic['name']}
-                    {f'Topic description: {topic_description}' if topic_description else ''}
-                    
-                    Your task is to:
-                    1. Begin with the given direct, engaging question that immediately focuses on the core concept of the topic
-                    2. Avoid generic introductions or small talk - get straight to the given question
+                    initial_prompt = build_initial_topic_prompt(next_topic)
 
-                    Given question: {next_topic['question']}
-                    
-                    Generate your response as a single, focused Socratic question that will start the discussion. Do not include any introductory text or explanations - just the given question itself."""
-                    
-                    print(f"Given question: {next_topic['question']}")
+                    print(f"Given question: {next_topic.get('question', '(none - generated from topic description)')}")
                     print(f"[Topic Transition] Generating initial question for new topic: {next_topic['name']}")
                     response = client.responses.create(
                         model=TutorConfig.MODEL_NAME,
@@ -580,18 +609,8 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
                 try:
                     client = setup_openai_client()
                     current_topic = st.session_state["current_topic"]
-                    topic_description = current_topic.get('description', '')
-                    initial_prompt = f"""You are starting a new topic: {next_topic['name']}
-                    {f'Topic description: {topic_description}' if topic_description else ''}
-                    
-                    Your task is to:
-                    1. Begin with the given direct, engaging question that immediately focuses on the core concept of the topic
-                    2. Avoid generic introductions or small talk - get straight to the given question
+                    initial_prompt = build_initial_topic_prompt(current_topic)
 
-                    Given question: {next_topic['question']}
-                    
-                    Generate your response as a single, focused Socratic question that will start the discussion. Do not include any introductory text or explanations - just the given question itself."""
-                    
                     print(f"[Tutor Interface] Generating initial question for topic: {current_topic['name']}")
                     response = client.responses.create(
                         model=TutorConfig.MODEL_NAME,

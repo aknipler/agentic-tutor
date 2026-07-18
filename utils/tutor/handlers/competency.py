@@ -370,16 +370,21 @@ def get_next_non_competent_topic(module_id: Union[str, int]) -> Optional[Dict[st
             print(f"[Next Topic] Topic progress: {progress}")
             
             if progress < 2:  # Not completed
-                # get the question from the module data. First get attribute index module data with the module index
-                module_topics = module_data.get("topics", [])
-                for topic in module_topics:
-                    if topic.get("name") == topic_name:
-                        question = topic.get("question", "")
+                # Pull the topic's description (and optional diagnostic question) from
+                # the module data. PRQ topics carry `description` but no `question`,
+                # so both are looked up with .get and passed on to the tutor prompt.
+                question = ""
+                description = ""
+                for module_topic in module_data.get("topics", []):
+                    if module_topic.get("name") == topic_name:
+                        question = module_topic.get("question", "")
+                        description = module_topic.get("description", "")
                         break
                 result = {
                     "name": topic_name,
                     "progress": progress,
                     "status": topic_data.get("status", "not_started"),
+                    "description": description,
                     "question": question
                 }
                 print(f"[Next Topic] Found non-competent topic: {result}")
