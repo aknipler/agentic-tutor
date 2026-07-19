@@ -14,6 +14,14 @@ def main():
         st.stop()
     
     st.title("Tutorial Questions")
+
+    # Navigating mid-submission abandons the in-flight request: the answer is lost
+    # and the text box comes back empty. Warn until that is handled properly.
+    st.warning(
+        "**Please wait for your answer to be assessed before navigating.** "
+        "Clicking Next or Previous, or moving to another page, while an answer is "
+        "being assessed will discard it and you will need to enter it again."
+    )
     
     # Get user ID from session state
     user_id = st.session_state.get("user_id", "user123")
