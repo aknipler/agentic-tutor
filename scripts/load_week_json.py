@@ -1,27 +1,24 @@
-"""Load lecturer week_*_assessor_questions.json files into the modules_live collection.
+"""Load week_*_assessor_questions.json files into the modules_live collection.
 
-The lecturers deliver each module as a Mongo Extended JSON document under
-`knowledge/MCEN_resources_extracted/`. Those files are close to drop-in
-`modules_live` documents but need three fixes before insertion (see docs/HANDOVER.md):
+Each source file is one module, supplied as Mongo Extended JSON. Three things are
+normalised on the way in:
 
-  1. Extended JSON wrappers ({"$oid": ...}, {"$numberInt": ...}) must be parsed
-     with bson.json_util, not plain json, or they get stored as literal subdocuments.
-  2. `index` is 0-based in the files (0, 1, 2) but the app is 1-based: module pages
-     hard-code module_id "1", "2", ...; user_progress keys progress docs by
-     str(module["index"]). This script renumbers `index` to 1-based on import.
-  3. `_id` is a placeholder $oid; we drop it and let Mongo assign real ones.
+  1. Extended JSON wrappers ({"$oid": ...}, {"$numberInt": ...}) are parsed with
+     bson.json_util, so they become real types rather than literal subdocuments.
+  2. `index` is renumbered to 1-based. The app keys everything off it: module pages
+     use it to find their module, and user progress is stored under str(index).
+  3. The source `_id` is dropped so Mongo assigns its own.
 
-It does NOT touch the placeholder `vector_store_id` values or add the missing
-per-topic `question` field on purpose (real vector stores are created via admin.py;
-the topic `question` KeyError is fixed separately in utils/tutor/interface.py) - but
-it warns about both so nothing is silently forgotten.
+Placeholder `vector_store_id` values and missing per-topic `question` fields are
+left alone (the first is handled by setup_vector_stores.py, the second is optional)
+but both are reported so neither is forgotten.
 
-Safety: this wipes and replaces the whole `modules_live` collection. It runs as a
-DRY RUN by default (prints what it would do, touches nothing). Pass --commit to write.
+Safety: this wipes and replaces the whole modules_live collection, so it runs as a
+DRY RUN by default. Pass --commit to write.
 
 Usage:
-    .venv/Scripts/python.exe scripts/load_week_json.py            # dry run / preview
-    .venv/Scripts/python.exe scripts/load_week_json.py --commit   # actually load
+    .venv/Scripts/python.exe scripts/load_week_json.py            # preview
+    .venv/Scripts/python.exe scripts/load_week_json.py --commit   # load
 """
 
 import argparse
@@ -103,12 +100,6 @@ def main() -> None:
     args = parser.parse_args()
 
     db_name = st.secrets["MONGODB_DATABASE_NAME"]
-    # Guard against the known FunCE bug (README): never write to the old subject's db.
-    if db_name.strip().lower() == "funce_db":
-        raise SystemExit(
-            "Refusing to run: MONGODB_DATABASE_NAME is 'funce_db' (the old FunCE database, a known bug). "
-            "Point .streamlit/secrets.toml at the PRQ database before loading."
-        )
 
     parsed = load_source_docs(args.data_dir)
     transformed = [transform(doc, new_index=i) for i, (_path, doc) in enumerate(parsed, start=1)]

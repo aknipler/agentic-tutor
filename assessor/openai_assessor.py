@@ -102,7 +102,6 @@ Be generous with you compency level rating. When it is unclear if the student ha
     response_text = ""
 
     try:
-        # --- Refactored API Call ---
         # Prepare messages for the chat completions endpoint
         messages = []
 
@@ -143,13 +142,11 @@ Expected Answer: {expected_answer}{success_criteria_text}"""
 
         # Extract content from the response
         response_text = response.choices[0].message.content if response.choices else ""
-        # --- End Refactored API Call ---
 
         # Reset defaults for parsing
         competency_level = 0
         feedback = "No feedback provided."
 
-        # --- Revised Feedback Extraction --- 
         try:
             # Find the position of "Feedback:" case-insensitively
             feedback_marker = "feedback:"
@@ -169,9 +166,8 @@ Expected Answer: {expected_answer}{success_criteria_text}"""
             # "Feedback:" marker not found, keep default feedback
             st.warning("Could not find 'Feedback:' marker in the response.")
             pass # Keep default feedback = "No feedback provided."
-        # --- End Revised Feedback Extraction ---
 
-        # Parse competency level (keep existing logic)
+        # Parse competency level
         for line in response_text.split('\n'):
             if line.lower().startswith("competency level:"):
                 try:

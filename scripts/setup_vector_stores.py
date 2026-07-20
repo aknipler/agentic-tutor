@@ -1,9 +1,8 @@
 """Create one OpenAI vector store per module and link it into modules_live.
 
-The lecturers' week JSONs ship a *placeholder* `vector_store_id` (e.g.
-`vs_week1_probability_reliability_quality`), which is not a real OpenAI id. The
-tutor passes whatever is stored straight into its `file_search` tool, so until a
-real store exists and is linked, tutor chat fails. This script closes that gap.
+The tutor passes a module's stored `vector_store_id` straight into its `file_search`
+tool, so a module whose id is a placeholder (or missing) will fail on every message.
+Run this once per module before students use it.
 
 For each module found in `modules_live` it:
   1. gathers that module's source files from knowledge/MCEN_resources_extracted/
@@ -18,8 +17,6 @@ week 4's files into the directory is therefore all that is needed to extend this
 Modules are matched on `index` (see utils/modules.py) - never on title.
 
 IMPORTANT: only files under knowledge/MCEN_resources_extracted/ are considered.
-The `knowledge/Module {1,2,3}.docx` files at the top level are leftover FunCE
-chemical-engineering content and must never be uploaded to a PRQ store.
 
 Safety: creating stores and uploading files bills your OpenAI account and is not
 undone by re-running. Runs as a DRY RUN by default; pass --commit to act.
@@ -86,8 +83,7 @@ def collect_source_files(data_dir: Path):
 def store_exists(client: OpenAI, vector_store_id: str) -> bool:
     """True if this id refers to a vector store that actually exists on OpenAI.
 
-    The placeholder ids in the lecturers' files look plausible but resolve to
-    nothing, so ask the API rather than pattern-matching the string.
+    Placeholder ids can look plausible, so ask the API rather than pattern-matching.
     """
     if not vector_store_id:
         return False
@@ -120,8 +116,6 @@ def main() -> None:
     args = parser.parse_args()
 
     db_name = st.secrets["MONGODB_DATABASE_NAME"]
-    if db_name.strip().lower() == "funce_db":
-        raise SystemExit("Refusing to run against 'funce_db' (the old FunCE database).")
 
     mongo = get_mongo_client()
     collection = mongo[db_name][COLLECTION]

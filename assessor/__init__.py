@@ -69,10 +69,8 @@ def main():
         st.info("No tutorial questions available for this module.")
         return
     
-    # Get module ID. This MUST be the module's own 1-based `index`, which is what
-    # user_module_progress is keyed by. Using the list position (0-based) instead
-    # made attempt counts and assessment results land in two different module
-    # records - see the compensating "+1" hacks this replaced.
+    # Must be the module's own `index`: user_module_progress is keyed by it, and a
+    # position in this list is not interchangeable with it.
     module_id = str(selected_module_data.get("index", ""))
     if not module_id:
         st.error("Selected module has no `index` field; cannot record progress against it.")

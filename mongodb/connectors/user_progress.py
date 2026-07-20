@@ -56,7 +56,13 @@ def get_user_progress(user_id="user123"):
                     }
                 
                 # Initialize questions
-                for question_id, question_info in module.get("tutorial_questions", {}).items():
+                tute_questions = module.get("tutorial_questions", {})
+
+                if isinstance(tute_questions, list):
+                    # Convert list format to dictionary format using simple index string keys
+                    tute_questions = {str(i + 1): q for i, q in enumerate(tute_questions)}
+                    
+                for question_id, (question_info, expected_answer) in tute_questions.items():
                     default_data["modules"][module_id]["questions"][question_id] = {
                         "status": "not_started",
                         "attempts": 0,
@@ -787,9 +793,7 @@ def save_assessment_results(user_id: str, module_id: str, question_index: int,
         user_doc = progress_collection.find_one({"user_id": user_id})
         current_attempts = 0
         
-        # Callers pass the module's 1-based `index`, which is exactly how modules are
-        # keyed here. (This used to guess at 0-based vs 1-based and silently shift the
-        # key, which split a question's data across two module records.)
+        # module_id is the module's 1-based `index`, matching how modules are keyed.
         module_key = str(module_id)
 
         # Debug information about the current state

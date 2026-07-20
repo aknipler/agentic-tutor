@@ -1,17 +1,13 @@
 """Remove orphaned module records from user_module_progress.
 
-Before the assessor was fixed to key on a module's 1-based `index`, it passed the
-module's 0-based list position instead. Attempt counts were written under that
-wrong key while assessment results went to the correct one, so a student working
-on module 1 could end up with both a `modules["0"]` record (attempts only, no
-feedback) and a `modules["1"]` record (the real assessment).
+Progress is stored per user as modules[<module index>]. If a module is removed from
+modules_live, or a bug writes progress under a key that never existed, the stale
+record lingers and can surface as misleading progress in the UI.
 
-`modules["0"]` can never be legitimate: `scripts/load_week_json.py` numbers
-modules from 1. This script finds progress records whose module key does not
-correspond to any module in modules_live and deletes them.
+This finds progress records whose module key matches no module in modules_live and
+removes them. Real progress is never touched.
 
-Safety: dry run by default. Pass --commit to actually delete. It only ever removes
-keys with no matching module; real progress is untouched.
+Safety: dry run by default. Pass --commit to delete.
 
 Usage:
     .venv/Scripts/python.exe scripts/cleanup_orphan_progress.py            # preview

@@ -209,9 +209,8 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
         # Submit button
         if st.button("Submit Answer", key=f"submit_{question_id}"):
             if answer.strip() or uploaded_files:
-                # NOTE: attempts are incremented by save_assessment_results() below,
-                # which owns the whole question record (status, competency, feedback,
-                # attempts). Incrementing here as well double-counted every submission.
+                # save_assessment_results() below owns the whole question record:
+                # status, competency, feedback and the attempt count.
 
                 # Process file uploads
                 image_data_list = []
@@ -258,13 +257,11 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
                     st.session_state[question_key]["last_attempt"] = datetime.now()
                     st.session_state[question_key]["just_assessed"] = True
 
-                    # get_module_data is cached for 5 minutes. Without clearing it the
-                    # page keeps serving pre-submission progress, so attempt counts and
-                    # results looked stale (and reverted when paging away and back).
+                    # Drop the cached progress, else the page keeps serving
+                    # pre-submission state until the cache expires.
                     get_module_data.clear()
 
-                    # Rerun so the results below render once, from fresh data. Rendering
-                    # them inline here as well produced two copies of the results.
+                    # Rerun so the results render once, below, from the database.
                     st.rerun()
             else:
                 st.warning("Please provide either a text answer or upload a solution (or both) before submitting.")

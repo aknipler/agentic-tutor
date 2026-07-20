@@ -756,11 +756,9 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
                     if tutorial_questions:
                         # Get user progress data from cache
                         user_progress = get_cached_user_progress()
-                        # --- Corrected Access to User Question Progress ---
-                        # Access the nested structure: user -> modules -> module_id -> questions
+                        # Nested structure: user -> modules -> module_id -> questions
                         module_progress = user_progress.get("modules", {}).get(str(module_id), {})
-                        user_questions_progress = module_progress.get("questions", {}) # This is the dict keyed by question_id
-                        # --- End Corrected Access ---
+                        user_questions_progress = module_progress.get("questions", {})
 
                         for question_id, question_info in tutorial_questions.items():
                             if not isinstance(question_info, dict):
@@ -768,20 +766,15 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
                             
                             question_title = question_info.get("label", f"Question {question_id}")
                             
-                            # Get question progress data using the correct dictionary
                             q_data = user_questions_progress.get(question_id, {})
 
-                            # --- Corrected Status Logic ---
-                            # Determine status based on both status field and competency_level
+                            # Full competency implies completion even if status lags.
                             status = q_data.get("status", "not_started")
                             competency_level = q_data.get("competency_level", 0)
-
-                            # If competency_level is 2 (full understanding), treat as completed
                             if competency_level >= 2:
                                 status = "completed"
 
                             status_emoji = get_status_emoji(status)
-                            # --- End Corrected Status Logic ---
 
                             attempts = q_data.get("attempts", 0)
                             

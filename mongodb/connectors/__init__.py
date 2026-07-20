@@ -1,13 +1,7 @@
 from .base import get_mongo_client
 from .modules import (
     get_modules_data,
-    get_cached_modules_data,
-    get_module_by_id,
-    get_topic_by_name,
-    get_question_by_id,
-    get_question_details,
-    get_module_topics,
-    get_all_modules
+    get_cached_modules_data
 )
 from .user_progress import (
     get_user_progress,
@@ -35,13 +29,7 @@ __all__ = [
     # Modules
     'get_modules_data',
     'get_cached_modules_data',
-    'get_module_by_id',
-    'get_topic_by_name',
-    'get_question_by_id',
-    'get_question_details',
-    'get_module_topics',
-    'get_all_modules',
-    
+
     # User Progress
     'get_user_progress',
     'update_user_progress',

@@ -7,7 +7,7 @@ if "logged_in" not in st.session_state or not st.session_state.logged_in:
     st.warning("Please login from the Home page to access this page.")
     st.stop()
 
-st.set_page_config(page_title="FunCE - Debug", layout="wide")
+st.set_page_config(page_title="Agentic Tutor - Debug", layout="wide")
 
 def load_file(file_path):
     """Load and display contents of a file"""
@@ -30,7 +30,7 @@ def load_file(file_path):
     except Exception as e:
         return f"Error: {str(e)}"
 
-st.title("FunCE Debug Page")
+st.title("Agentic Tutor Debug Page")
 
 # Check for specific files
 data_files = {
