@@ -2,9 +2,8 @@ import streamlit as st
 from typing import Dict, List, Optional
 from .utils import get_status_emoji
 from .data import (
-    get_user_module_progress, 
-    update_question_progress, 
-    save_assessment_results, 
+    get_user_module_progress,
+    save_assessment_results,
     get_module_data,
     get_assessment_results
 )
@@ -210,9 +209,8 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
         # Submit button
         if st.button("Submit Answer", key=f"submit_{question_id}"):
             if answer.strip() or uploaded_files:
-                # Increment attempts *before* assessment
-                new_attempts = attempts + 1
-                update_question_progress(user_id, module_id, question_index, status="in_progress", attempts=new_attempts)
+                # save_assessment_results() below owns the whole question record:
+                # status, competency, feedback and the attempt count.
 
                 # Process file uploads
                 image_data_list = []
@@ -245,7 +243,7 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
 
                     save_assessment_results(
                         user_id=user_id,
-                        module_id=str(int(module_id)+1),
+                        module_id=str(module_id),
                         question_index=question_index,
                         competency_level=assessment["competency_level"],
                         feedback=assessment["feedback"],
@@ -257,33 +255,14 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
                     # Update session state with the new assessment
                     st.session_state[question_key]["assessment"] = assessment
                     st.session_state[question_key]["last_attempt"] = datetime.now()
+                    st.session_state[question_key]["just_assessed"] = True
 
-                    st.success("Your answer has been assessed!")
-                    
-                    with st.container(border=True):
-                        st.subheader("Assessment Results")
-                        progress = assessment["competency_level"] / 2
-                        st.progress(progress)
-                        competency_text = {
-                            0: "Not Attempted",
-                            1: "Partial Understanding",
-                            2: "Full Understanding"
-                        }.get(assessment["competency_level"], "Unknown")
-                        st.write(f"Competency Level: {competency_text}")
-                        st.write(f"Feedback: {assessment['feedback']}")
-                        
-                        # Display answer image if available
-                        # Old implementation using URLs (commented out)
-                        # answer_image_url = question_info.get("answer_image_url")
-                        # if answer_image_url:
-                        #     st.image(answer_image_url, caption="Answer Image")
-                        
-                        # New implementation using local images
-                        answer_image_path = os.path.join(ANSWER_IMAGES_DIR, f"{question_label}.png")
-                        if os.path.exists(answer_image_path):
-                            st.image(answer_image_path, caption="Answer Image")
-                    
-                    # st.rerun()
+                    # Drop the cached progress, else the page keeps serving
+                    # pre-submission state until the cache expires.
+                    get_module_data.clear()
+
+                    # Rerun so the results render once, below, from the database.
+                    st.rerun()
             else:
                 st.warning("Please provide either a text answer or upload a solution (or both) before submitting.")
         
@@ -300,6 +279,11 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
                     # Update session state with the retrieved assessment
                     st.session_state[question_key]["assessment"] = assessment
         
+        # Confirm a submission that just completed (set before the rerun above)
+        if st.session_state[question_key].get("just_assessed"):
+            st.success("Your answer has been assessed!")
+            st.session_state[question_key]["just_assessed"] = False
+
         # Display previous feedback if available
         print(f"[DEBUG] assessment: {assessment}")
         if assessment and assessment.get("competency_level", 0) > 0:
@@ -315,4 +299,9 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
                     2: "Full Understanding"
                 }.get(competency_level, "Unknown")
                 st.write(f"Competency Level: {competency_text}")
-                st.write(f"Feedback: {assessment.get('feedback', 'No feedback available.')}") 
+                st.write(f"Feedback: {assessment.get('feedback', 'No feedback available.')}")
+
+                # Display answer image if available
+                answer_image_path = os.path.join(ANSWER_IMAGES_DIR, f"{question_label}.png")
+                if os.path.exists(answer_image_path):
+                    st.image(answer_image_path, caption="Answer Image") 

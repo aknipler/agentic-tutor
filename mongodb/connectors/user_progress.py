@@ -56,7 +56,13 @@ def get_user_progress(user_id="user123"):
                     }
                 
                 # Initialize questions
-                for question_id, question_info in module.get("tutorial_questions", {}).items():
+                tute_questions = module.get("tutorial_questions", {})
+
+                if isinstance(tute_questions, list):
+                    # Convert list format to dictionary format using simple index string keys
+                    tute_questions = {str(i + 1): q for i, q in enumerate(tute_questions)}
+                    
+                for question_id, (question_info, expected_answer) in tute_questions.items():
                     default_data["modules"][module_id]["questions"][question_id] = {
                         "status": "not_started",
                         "attempts": 0,
@@ -787,14 +793,9 @@ def save_assessment_results(user_id: str, module_id: str, question_index: int,
         user_doc = progress_collection.find_one({"user_id": user_id})
         current_attempts = 0
         
-        # Convert module_id to string and handle potential module_id format differences (0-based vs 1-based indexing)
+        # module_id is the module's 1-based `index`, matching how modules are keyed.
         module_key = str(module_id)
-        if user_doc and module_key.isdigit() and all(k.isdigit() for k in user_doc.get("modules", {}).keys()):
-            # If assessor is using 0-based but db uses 1-based, add 1
-            if user_doc.get("modules", {}).get(module_key) is None and user_doc.get("modules", {}).get(str(int(module_key)+1)) is not None:
-                module_key = str(int(module_key)+1)
-                print(f"[DEBUG] Adjusted module_id from {module_key} to {module_key}")
-        
+
         # Debug information about the current state
         if user_doc and "modules" in user_doc and module_key in user_doc.get("modules", {}):
             print(f"[DEBUG] All modules: {list(user_doc['modules'].keys())}")
@@ -883,13 +884,9 @@ def get_assessment_results(user_id: str, module_id: str, question_index: int) ->
         user_doc = progress_collection.find_one({"user_id": user_id})
         
         if user_doc:
-            # Convert module_id to string and handle potential module_id format differences (0-based vs 1-based indexing)
+            # module_id is the module's 1-based `index`, matching how modules are keyed.
             module_key = str(module_id)
-            if module_key.isdigit() and all(k.isdigit() for k in user_doc.get("modules", {}).keys()):
-                # If assessor is using 0-based but db uses 1-based, add 1
-                if user_doc.get("modules", {}).get(module_key) is None and user_doc.get("modules", {}).get(str(int(module_key)+1)) is not None:
-                    module_key = str(int(module_key)+1)
-            
+
             # Extract question data from the nested structure
             question_data = user_doc.get("modules", {}).get(module_key, {}).get("questions", {}).get(question_id)
             
@@ -914,7 +911,7 @@ def get_module_data(user_id: str, module_id: str) -> Dict:
     
     Args:
         user_id (str): The user's ID
-        module_id (str): The module ID (adjusted to work with 0-based indexes)
+        module_id (str): The module's 1-based `index`
         
     Returns:
         Dict: A dictionary containing progress and assessment information
@@ -929,14 +926,9 @@ def get_module_data(user_id: str, module_id: str) -> Dict:
         if not user_doc:
             return {"progress": {}, "assessments": {}, "topics": {}}
         
-        # Convert module_id to correct format if needed
-        # Check if module_id needs to be adjusted to match the database format
+        # module_id is the module's 1-based `index`, matching how modules are keyed.
         module_key = str(module_id)
-        if module_key.isdigit() and all(k.isdigit() for k in user_doc.get("modules", {}).keys()):
-            # If assessor is using 0-based but db uses 1-based, add 1
-            if user_doc.get("modules", {}).get(module_id) is None and user_doc.get("modules", {}).get(str(int(module_id)+1)) is not None:
-                module_key = str(int(module_id)+1)
-        
+
         # Extract progress data for the specific module
         progress_data = user_doc.get("modules", {}).get(module_key, {})
         

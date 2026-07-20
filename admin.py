@@ -24,8 +24,13 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Security check - you should implement proper authentication
 def check_admin_access():
-    # TODO: Implement proper authentication
-    return True
+    # Admin pwd in .streamlit/secrets.toml, ask for pwd check that it matches
+    try:
+        if st.secrets["ADMIN_PASSWORD"] == input("Enter admin password: "):
+            return True
+    except Exception as e:
+        st.error(f"Error checking admin access: {str(e)}")
+    return False
 
 def get_vector_store_info(store: VectorStore) -> Dict:
     """Get information about a vector store."""

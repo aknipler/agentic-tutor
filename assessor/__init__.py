@@ -14,6 +14,14 @@ def main():
         st.stop()
     
     st.title("Tutorial Questions")
+
+    # Navigating mid-submission abandons the in-flight request: the answer is lost
+    # and the text box comes back empty. Warn until that is handled properly.
+    st.warning(
+        "**Please wait for your answer to be assessed before navigating.** "
+        "Clicking Next or Previous, or moving to another page, while an answer is "
+        "being assessed will discard it and you will need to enter it again."
+    )
     
     # Get user ID from session state
     user_id = st.session_state.get("user_id", "user123")
@@ -28,11 +36,12 @@ def main():
     preselected_module_id = st.session_state.get("selected_module_id")
     preselected_question_id = st.session_state.get("selected_question_id")
     
-    # Get the module title if we have a preselected module
+    # Get the module title if we have a preselected module. Match on the module's
+    # own `index`, not its position in the list.
     preselected_module_title = None
     if preselected_module_id:
-        for i, module in enumerate(modules, 1):
-            if str(i) == preselected_module_id:
+        for module in modules:
+            if str(module.get("index")) == str(preselected_module_id):
                 preselected_module_title = module.get("title")
                 break
     
@@ -60,8 +69,12 @@ def main():
         st.info("No tutorial questions available for this module.")
         return
     
-    # Get module ID
-    module_id = modules.index(selected_module_data)
+    # Must be the module's own `index`: user_module_progress is keyed by it, and a
+    # position in this list is not interchangeable with it.
+    module_id = str(selected_module_data.get("index", ""))
+    if not module_id:
+        st.error("Selected module has no `index` field; cannot record progress against it.")
+        return
     
     # Initialize question_page in session state if not exists
     if "question_page" not in st.session_state:
