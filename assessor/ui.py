@@ -1,6 +1,8 @@
 import streamlit as st
+import hashlib
 from typing import Dict, List, Optional
 from .utils import get_status_emoji
+from .voice import transcribe
 from .data import (
     get_user_module_progress,
     save_assessment_results,
@@ -128,7 +130,112 @@ def render_questions_paginated(questions: Dict, user_id: str, module_id: str, pe
         with col2:
             st.write(f"Page {current_page} of {total_pages}")
 
-def render_question(question_id: str, question_info: Dict, user_id: str, module_id: str, 
+def run_assessment(user_id: str, module_id: str, question_index: int, question_key: str,
+                   question_text: str, question_info: Dict, answer_text: str,
+                   image_data_list: Optional[List[bytes]] = None) -> None:
+    """Assess an answer, persist the result, then rerun so it renders once.
+
+    Shared by the typed and spoken submission paths so both record progress
+    identically. Does not return - it ends in st.rerun().
+    """
+    image_data_list = image_data_list or []
+
+    with st.spinner("Assessing your answer..."):
+        assessment = assess_answer(
+            question=question_text,
+            answer=answer_text,
+            expected_answer=question_info.get("expected_answer", "No expected answer provided."),
+            image_data_list=image_data_list,
+            success_criteria=question_info.get("success_criteria", "")
+        )
+
+        logger.log_submission(
+            user_id=user_id,
+            module=str(module_id),
+            question=question_text,
+            submission=answer_text,
+            grade=assessment["competency_level"] / 2  # Convert to 0-1 scale
+        )
+
+        # Owns the whole question record: status, competency, feedback, attempts.
+        save_assessment_results(
+            user_id=user_id,
+            module_id=str(module_id),
+            question_index=question_index,
+            competency_level=assessment["competency_level"],
+            feedback=assessment["feedback"],
+            status=assessment["status"],
+            response_text=assessment["response_text"],
+            input_image_data=assessment["input_image_data"]
+        )
+
+        st.session_state[question_key]["assessment"] = assessment
+        st.session_state[question_key]["last_attempt"] = datetime.now()
+        st.session_state[question_key]["just_assessed"] = True
+
+        # Drop the cached progress, else the page keeps serving pre-submission
+        # state until the cache expires.
+        get_module_data.clear()
+
+        # Rerun so the results render once, below, from the database.
+        st.rerun()
+
+
+def render_voice_answer(question_id: str, question_key: str, question_text: str,
+                        question_info: Dict, user_id: str, module_id: str,
+                        question_index: int) -> None:
+    """Record a spoken answer, transcribe it, and submit once confirmed.
+
+    The transcript is always shown for review before it counts: speech models
+    mangle technical terms, and an unchecked mis-transcription would be graded and
+    consume an attempt.
+    """
+    voice_key = f"voice_{question_key}"
+    voice_state = st.session_state.setdefault(voice_key, {"processed_hash": None, "transcript": None})
+
+    recording = st.audio_input("Record your answer", key=f"audio_{question_id}")
+
+    if recording is not None:
+        audio_bytes = recording.getvalue()
+        # st.audio_input keeps returning the same recording on every rerun, so
+        # fingerprint it and only transcribe one we haven't already handled.
+        digest = hashlib.sha256(audio_bytes).hexdigest()
+        if digest != voice_state["processed_hash"]:
+            voice_state["processed_hash"] = digest
+            with st.spinner("Transcribing your answer..."):
+                voice_state["transcript"] = transcribe(
+                    audio_bytes,
+                    filename=getattr(recording, "name", None) or "answer.wav",
+                    question_text=question_text
+                )
+
+    transcript = voice_state.get("transcript")
+    if not transcript:
+        return
+
+    st.caption("Check the transcription before submitting - edit it if anything was misheard.")
+    edited = st.text_area("Transcribed answer", value=transcript, key=f"transcript_{question_id}")
+
+    confirm_col, discard_col = st.columns(2)
+    with confirm_col:
+        if st.button("Submit this answer", key=f"submit_voice_{question_id}"):
+            if edited.strip():
+                # Clear the transcript but keep the fingerprint, so the same
+                # recording isn't transcribed again on the post-submit rerun.
+                voice_state["transcript"] = None
+                run_assessment(
+                    user_id, module_id, question_index, question_key,
+                    question_text, question_info, edited.strip()
+                )
+            else:
+                st.warning("The transcribed answer is empty. Please record again.")
+    with discard_col:
+        if st.button("Discard & re-record", key=f"discard_voice_{question_id}"):
+            voice_state["transcript"] = None
+            st.rerun()
+
+
+def render_question(question_id: str, question_info: Dict, user_id: str, module_id: str,
                   module_progress: Dict = None, assessment: Dict = None):
     """Render a single question with its answer input and file upload"""
     # Convert question_id to index (zero-based)
@@ -209,9 +316,6 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
         # Submit button
         if st.button("Submit Answer", key=f"submit_{question_id}"):
             if answer.strip() or uploaded_files:
-                # save_assessment_results() below owns the whole question record:
-                # status, competency, feedback and the attempt count.
-
                 # Process file uploads
                 image_data_list = []
                 if uploaded_files:
@@ -220,52 +324,22 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
                             image_bytes = uploaded_file.read()
                             image_data_list.append(image_bytes)
 
-                # Assess the answer
-                with st.spinner("Assessing your answer..."):
-                    expected_answer_text = question_info.get("expected_answer", "No expected answer provided.")
-
-                    assessment = assess_answer(
-                        question=question_text,
-                        answer=answer.strip() if answer.strip() else "No text answer provided. Please refer to the uploaded solution(s).",
-                        expected_answer=expected_answer_text,
-                        image_data_list=image_data_list,
-                        success_criteria=question_info.get("success_criteria", "")
-                    )
-
-                    # Log the submission
-                    logger.log_submission(
-                        user_id=user_id,
-                        module=str(module_id),
-                        question=question_text,
-                        submission=answer.strip() if answer.strip() else "No text answer provided. Please refer to the uploaded solution(s).",
-                        grade=assessment["competency_level"] / 2  # Convert to 0-1 scale
-                    )
-
-                    save_assessment_results(
-                        user_id=user_id,
-                        module_id=str(module_id),
-                        question_index=question_index,
-                        competency_level=assessment["competency_level"],
-                        feedback=assessment["feedback"],
-                        status=assessment["status"],
-                        response_text=assessment["response_text"],
-                        input_image_data=assessment["input_image_data"]
-                    )
-
-                    # Update session state with the new assessment
-                    st.session_state[question_key]["assessment"] = assessment
-                    st.session_state[question_key]["last_attempt"] = datetime.now()
-                    st.session_state[question_key]["just_assessed"] = True
-
-                    # Drop the cached progress, else the page keeps serving
-                    # pre-submission state until the cache expires.
-                    get_module_data.clear()
-
-                    # Rerun so the results render once, below, from the database.
-                    st.rerun()
+                run_assessment(
+                    user_id, module_id, question_index, question_key,
+                    question_text, question_info,
+                    answer.strip() or "No text answer provided. Please refer to the uploaded solution(s).",
+                    image_data_list
+                )
             else:
                 st.warning("Please provide either a text answer or upload a solution (or both) before submitting.")
-        
+
+        # Spoken answers, as an alternative to typing
+        if st.toggle("🎤 Answer by voice", key=f"voice_toggle_{question_id}"):
+            render_voice_answer(
+                question_id, question_key, question_text, question_info,
+                user_id, module_id, question_index
+            )
+
         # Retrieve assessment results if not provided
         if assessment is None:
             # First try to get from session state

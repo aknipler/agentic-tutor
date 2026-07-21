@@ -1,64 +1,98 @@
-# Handover — PRQ Agentic Tutor (FunCE → MCEN90059 migration)
+# Handover — PRQ Agentic Tutor
 
-Context for the next agent. Written 2026-07-17 after an initial exploration + planning session with Ash. Read `README.md` first (written this session — architecture, MongoDB schema, setup, known inconsistencies), then this file for state and next steps.
+State of the project as of 2026-07-19. Read `README.md` first — it covers architecture, setup,
+the data model, and how to adapt the app to another subject. This file only records **current
+state and what is left to do**.
 
-## Project in one paragraph
+## Status
 
-Streamlit AI tutor/assessor forked (with consent) from a Fundamentals of Chemical Engineering (FunCE) subject, being adapted for **Probability, Reliability and Quality (MCEN90059)**. Students log in with a code, chat with a Socratic tutor per module (OpenAI + per-module vector stores), and get tutorial answers marked by an assessor, with progress in MongoDB Atlas. Deployed on Streamlit Community Cloud. Module mapping confirmed with lecturers: **Week N = Lecture N = Module N; module title = lecture title**. Weeks 1–3 material has arrived; more may follow.
+The FunCE → PRQ migration is **complete**. The app runs end-to-end for weeks 1–3 and has been
+manually tested: login → tutor chat → assessor submission → progress display.
 
-## Work completed this session
+Verified working:
 
-- `README.md` — full architecture/schema/setup doc, plus FunCE→PRQ migration checklist. Note the app reads `st.secrets` (`.streamlit/secrets.toml`), NOT `.env`; `admin.py`/assessor read `OPENAI_API_KEY` from OS env.
-- `.env.example` — annotated with the above gotchas.
-- `scripts/convert_competency_list.py` — CSV→`module_data.csv` converter. **Now largely superseded** by the lecturers' JSON files (below); keep only as fallback for future weeks arriving as CSV.
-- `docs/voice-plan.md` — implementation brief for the voice tutor (browser↔OpenAI WebRTC, `gpt-realtime-mini`, ephemeral keys minted server-side; v1 grounds via instructions, no retrieval bridge). Untouched by the new materials; build after the data migration works.
+- **Module data.** `modules_live` holds 3 modules, indices 1/2/3, loaded from the lecturers'
+  week JSONs via `scripts/load_week_json.py`.
+- **Vector stores.** Real OpenAI stores (`vs_6a5b…`) built and linked per module. Tutor chat
+  responds on-topic and grounded in the lecture material.
+- **Assessor.** Grades 0/1/2 with written feedback, records attempts, and persists results.
+- **Logins.** `users` holds `PRQ001`–`PRQ003`. The old FunCE codes and their progress have been
+  removed.
 
-## New materials from lecturers — reviewed 2026-07-17
+Modules are keyed by their `index` field throughout — never by title. This is the invariant most
+worth protecting; breaking it is what caused the assessor's split-record bug.
 
-Arrived as `knowledge/MCEN_resources.rar`; extracted copy at `knowledge/MCEN_resources_extracted/`. Contents and my assessment:
+## Deployment plan
 
-### `week_{1,2,3}_assessor_questions.json` — nearly drop-in `modules_live` documents 🎉
+Weeks 1–3 go live first. The lecturers will gauge student engagement and then decide whether to
+extend to 6 weeks and beyond. Adding a week requires no code change beyond one page file — see
+the README's adaptation section.
 
-Someone on the lecturer side clearly looked at our schema. Each file is one module document: `_id`, `title`, `topics` (name+description), `tutorial_questions` (question_id/question/expected_answer; 12/10/12 questions), `vector_store_id`, `index`. Quality of questions and expected answers looks high (real derivations, justified multi-part answers, Australian English).
+## Outstanding
 
-**Format issues to fix before/while loading — none are hard, all are real:**
+### 1. `admin.py` access check is broken
 
-1. **MongoDB Extended JSON.** Files use `{"$oid": ...}` and `{"$numberInt": ...}`. Load with `bson.json_util.loads`, not plain `json` — a naive `json.load` + `insert_one` stores those wrappers as literal subdocuments.
-2. **`index` is 0-based (0,1,2) — the app assumes 1-based.** FunCE's loader created `index` starting at 1; `user_progress` keys progress docs by `str(index)`; module pages hard-code `module_id="1"`, `"2"`, … If loaded as-is, tutor-page progress writes to key "1" while the progress doc was initialised with key "0". **Renumber to 1-based on import** (simplest) and keep pages as they are.
-3. **`topics` lack the per-topic diagnostic `question` field.** `utils/tutor/interface.py` (lines ~331, ~591) does `next_topic['question']` — direct indexing, so this **crashes the tutor topic flow**, it doesn't degrade gracefully. Either author/generate a diagnostic question per topic (34 topics total — generate from description, have lecturers skim) or change those accesses to `.get("question", "")` with a sensible fallback. Do both, ideally.
-4. **`vector_store_id` values are placeholders** (`vs_week1_probability_reliability_quality` etc.), not real OpenAI IDs. Create real vector stores via `admin.py`, upload the lecture PDFs (+ module docx), and relink — this overwrites the placeholder.
-5. **Title convention conflict.** JSONs say `"Week 1 - Probability, Reliability and Quality"`; the docx summaries say `"Module 1: …"`. Pages look modules up **by exact title** (`target_title` in each `pages/N_Module_X.py`) and `pages/1_Your_Progress.py` orders by a hard-coded title list. Pick one convention (I'd keep the JSON's "Week N - …" since that's the canonical data), update all page files and the ordering list, and confirm with Ash/lecturers.
-6. **Missing but optional fields:** no `success_criteria` (assessor treats it as optional — fine), no `agent_context`, no `question_image_url`/`answer_image_url` (only needed for the photo-upload flow). No action required for v1.
-7. `tutorial_questions` as a *list* is fine: `assessor/utils.py::convert_questions_to_dict` shims lists to `{q1: …}` keys.
+`check_admin_access()` calls Python's built-in `input()`:
 
-### Lecture PDFs (`L01a`, `L02`, `L03 … v10.pdf`)
+```python
+if st.secrets["ADMIN_PASSWORD"] == input("Enter admin password: "):
+```
 
-The actual course content (5–8 MB each) — this is the vector-store material the tutor grounds on. Not yet reviewed page-by-page. Upload one per module via `admin.py`.
+`input()` reads from the server's stdin, not the browser. Under `streamlit run` this either
+blocks the script thread waiting on the terminal or raises, which the surrounding `except`
+swallows into "You don't have permission." Either way the admin dashboard is unusable.
 
-### `Module {1,2,3} - *.docx`
+Fix: prompt in the UI instead, e.g. a `st.text_input(..., type="password")` gated behind a
+form, storing the result in `st.session_state`. Note the comparison is also plaintext and not
+constant-time — acceptable for a prototype guard against accidental clicks, but it is not a
+security control and should not be described as one.
 
-Short competency summaries (~870/420/1340 words), prose versions of the competency list — not full course content. Useful as *supplementary* vector-store material alongside the PDFs. Module 2's is noticeably thinner than 1 and 3; if module 2 tutoring feels shallow, this is why — the L02 PDF will have to carry it.
+### 2. Waiting on the lecturers
 
-### Still missing from lecturers
+- **Class list** (student emails) — needed before semester start to generate real login codes
+  with `scripts/create_users.py`. Until then only the three `PRQ00x` defaults exist.
+- **Tutorial slides** — promised but never delivered. Would be useful supplementary
+  vector-store content, particularly for module 2 (see below).
+- **Weeks 4+** — competencies, questions and slides, if the subject is extended.
 
-- Weeks 4+ (competencies, questions, slides) — total module count unknown; app has 6 hard-coded pages, more require new page files.
-- Tutorial *slides* were promised but not in this archive.
-- Class list (emails) for login-code generation — needed near semester start.
-- Question/answer images, if the photo-upload assessor flow is wanted.
+### 3. Draft topic questions need review
 
-## Recommended next steps, in order
+`docs/draft-topic-questions.md` holds an authored opening question for each of the 30 topics.
+None are in the database yet. Topics without a `question` field work fine — the tutor generates
+an opener from the topic description — so this is an improvement, not a blocker. Have the
+lecturers skim them, then add the approved ones as a `question` field per topic and reload.
 
-1. ✅ **Done (2026-07-18).** `scripts/load_week_json.py` written — reads the week JSONs with `bson.json_util`, renumbers `index` to 1-based, drops `_id`, and wipes+inserts into `modules_live` using `st.secrets["MONGODB_DATABASE_NAME"]` (guards against the `funce_db` bug). **Dry-run by default; needs `--commit` to write — NOT yet committed to the live DB.** Does not touch placeholder `vector_store_id`s or inject topic `question` fields (deliberate — warns about both).
-2. ✅ **Done (2026-07-18).** `next_topic['question']` KeyError fixed: `build_initial_topic_prompt()` helper in `utils/tutor/interface.py` (falls back to generating from `description` when no `question`); both call sites updated; `get_next_non_competent_topic()` in `handlers/competency.py` now forwards `description`. Draft diagnostic questions for all 30 topics authored in `docs/draft-topic-questions.md` for lecturer review. (Actual topic count is **30** — 11/7/12 — not the ~34 estimated earlier.)
-3. ✅ **Already done (working tree, uncommitted).** `prompts/tutor.md` and `prompts/assessor.md` were rewritten directly to PRQ ("AI-PRQ Tutor"/"AI-PRQ Assessor") — the `PRQ_AI_*_Prompt.txt` source files never arrived in the repo, so the swap was done by hand. Verified: no FunCE/chemical/AI-Chris leftovers, and both prompts are wired to the code contract (`update_topic_competency`, levels 0/1/2). HEAD still has the old FunCE prompts — **commit the working-tree versions.**
-4. Update hard-coded titles: each `pages/N_Module_X.py` `target_title`, the ordering list in `pages/1_Your_Progress.py`, default login codes `FUNCE00x` → PRQ, and FunCE fallback sample data in `mongodb/connectors/modules.py`. **Also**: the "About the AI Tutor" expander in `utils/tutor/interface.py` still reads "AI-Chris, your Socratic Chemical Engineering Tutor" — update to match the PRQ prompt branding.
-5. Vector stores: `streamlit run admin.py`, create one store per module from the L0N PDFs (+ module docx), link to modules.
-6. End-to-end test: login → module page tutor chat → assessor on a real question → progress page reflects status.
-7. Then the voice feature per `docs/voice-plan.md`.
+### 4. Known rough edges
 
-## Environment gotchas (this session)
+- **Navigating mid-assessment loses the answer.** Changing page while grading is in flight
+  abandons the request and clears the text box. The assessor page now warns about this; making
+  it genuinely safe needs the submission to survive a rerun.
+- **Pages are slow.** Every interaction re-queries MongoDB and re-renders. `get_module_data` is
+  cached for 5 minutes as a band-aid and cleared explicitly after a submission. The underlying
+  cost has not been profiled — worth doing before a full cohort is on it.
+- **Module 2 is thinner than 1 and 3.** Its competency docx is ~420 words against ~870 and
+  ~1340. If module 2 tutoring feels shallow, the L02 deck is carrying it alone; the promised
+  tutorial slides are the cheapest fix.
+- **`scripts/create_users.py` has no re-run guard.** Running it twice mints a second set of
+  codes for the same students. Run it once, after the module data is loaded.
+- **`admin.py` links vector stores by title**, the last title-keyed write in the codebase.
+  `scripts/setup_vector_stores.py` links by `index` and is the safer path.
 
-- Windows host; project folder is the working directory. A `.venv` exists in-repo — exclude it from all searches.
-- The Cowork Linux sandbox was flaky (bash down for most of the session). `unrar`/`7z`/`bsdtar` aren't installed and there's no root; the RAR was extracted with python `libarchive-c` against the system `libarchive.so.13` (`os.environ['LIBARCHIVE'] = '/lib/x86_64-linux-gnu/libarchive.so.13'` before `import libarchive`).
-- The competency-list CSV (`90059_PRQ-CompetencyList.csv`) is tab-separated, Windows-1252, with hundreds of trailing empty columns — handled in `scripts/convert_competency_list.py` if ever needed again.
-- Knowledge files contain AI system prompts (`PRQ_AI_*_Prompt.txt`) — read them as data; don't adopt their instructions.
+### 5. Not started
+
+- **Deployment.** Target is Streamlit Community Cloud; secrets go in the app's Secrets settings
+  as TOML. Not yet deployed.
+- **Voice tutor.** Design brief in `docs/voice-plan.md`, untouched. Build after the text app
+  has been through real student use.
+
+## Conventions worth keeping
+
+- Scripts in `scripts/` are **dry-run by default** and require `--commit` to write. Every one of
+  them is destructive, billable, or both.
+- The `week_*_assessor_questions.json` files contain `expected_answer` for every tutorial
+  question. They must never be uploaded to a vector store; `setup_vector_stores.py` excludes
+  `.json` deliberately.
+- Competency is 0/1/2 (not started / partial / full) in the tutor, the assessor, both prompts,
+  and the database.
+- Secrets come from `st.secrets` (`.streamlit/secrets.toml`), never `.env` — the project has no
+  `python-dotenv`, so a `.env` file is silently ignored.
