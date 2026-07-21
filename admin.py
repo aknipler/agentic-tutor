@@ -22,14 +22,39 @@ st.set_page_config(
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Security check - you should implement proper authentication
-def check_admin_access():
-    # Admin pwd in .streamlit/secrets.toml, ask for pwd check that it matches
+def check_admin_access() -> bool:
+    """Gate the dashboard behind the password in secrets.
+
+    This guards against stray clicks, not against an attacker: the comparison is
+    plaintext and the app is not otherwise hardened. Don't expose admin.py publicly.
+
+    Returns True once unlocked for the session; renders the prompt and returns
+    False otherwise.
+    """
+    if st.session_state.get("admin_authenticated", False):
+        return True
+
     try:
-        if st.secrets["ADMIN_PASSWORD"] == input("Enter admin password: "):
-            return True
-    except Exception as e:
-        st.error(f"Error checking admin access: {str(e)}")
+        admin_password = st.secrets["ADMIN_PASSWORD"]
+    except (KeyError, FileNotFoundError):
+        st.error(
+            "No `ADMIN_PASSWORD` set. Add one to `.streamlit/secrets.toml` "
+            "to use the admin dashboard."
+        )
+        return False
+
+    st.title("Admin Dashboard")
+    with st.form("admin_login"):
+        # Must be a widget: input() reads the server's stdin, not the browser,
+        # which hangs the script thread under `streamlit run`.
+        entered = st.text_input("Admin password", type="password")
+        if st.form_submit_button("Unlock") and entered:
+            if entered == admin_password:
+                st.session_state.admin_authenticated = True
+                st.rerun()
+            else:
+                st.error("Incorrect password.")
+
     return False
 
 def get_vector_store_info(store: VectorStore) -> Dict:
@@ -98,12 +123,17 @@ def update_module_vector_store(module_title: str, vector_store_id: str) -> bool:
         return False
 
 def main():
+    # Renders its own password prompt when locked.
     if not check_admin_access():
-        st.error("You don't have permission to access this page.")
         return
 
     st.title("Admin Dashboard")
-    
+
+    with st.sidebar:
+        if st.button("Lock dashboard"):
+            st.session_state.admin_authenticated = False
+            st.rerun()
+
     # Add a sidebar for navigation
     st.sidebar.title("Navigation")
     page = st.sidebar.radio("Go to", ["User Progress", "Database Maintenance"])
