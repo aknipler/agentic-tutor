@@ -1,5 +1,7 @@
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, time
+
+from mongodb.connectors.user_management import create_user
 from .base import get_mongo_client
 from typing import List, Dict, Any, Optional
 from .modules import get_cached_modules_data
@@ -24,57 +26,12 @@ def get_user_progress(user_id="user123"):
         user_data = user_progress_collection.find_one({"user_id": user_id})
         
         if not user_data:
-            # Get modules data from cache
-            modules_data = get_cached_modules_data()
-            modules_list = modules_data.get("modules", [])
-            
-            # Create default progress structure for new user
-            default_data = {
-                "user_id": user_id,
-                "created_at": datetime.now(),
-                "updated_at": datetime.now(),
-                "modules": {}
-            }
-            
-            # Initialize modules with default values
-            for module in modules_list:
-                # Use the module's explicit index field
-                module_id = str(module.get("index", 0))
-                default_data["modules"][module_id] = {
-                    "progress": 0,
-                    "status": "not_started",
-                    "topics": {},
-                    "questions": {}
-                }
-                
-                # Initialize topics
-                for topic in module.get("topics", []):
-                    topic_name = topic.get("name")
-                    default_data["modules"][module_id]["topics"][topic_name] = {
-                        "progress": 0,
-                        "status": "not_started"
-                    }
-                
-                # Initialize questions
-                tute_questions = module.get("tutorial_questions", {})
+            if st.session_state.get('debug_mode', False):
+                st.error(f"Debug: get_user_progress called but user progress does not exist for {user_id}. Creating new user progress.")
+            status, user_data = create_user_progress(user_id)
+            if not status:
+                st.error("Error creating user progress in get_user_progress")
 
-                if isinstance(tute_questions, list):
-                    # Convert list format to dictionary format using simple index string keys
-                    tute_questions = {str(i + 1): q for i, q in enumerate(tute_questions)}
-                    
-                for question_id, (question_info, expected_answer) in tute_questions.items():
-                    default_data["modules"][module_id]["questions"][question_id] = {
-                        "status": "not_started",
-                        "attempts": 0,
-                        "last_attempt": None
-                    }
-            
-            # Insert default progress data
-            user_progress_collection.insert_one(default_data)
-            
-            # Return the default data
-            return default_data
-        
         if st.session_state.get('debug_mode', False):
             st.write("Debug: Retrieved user progress:", user_data)
         return user_data
@@ -547,7 +504,7 @@ def create_user_progress(user_id: str) -> bool:
         user_id (str): The ID of the user to create.
         
     Returns:
-        bool: True if the user was created successfully, False otherwise.
+        tuple: A tuple containing a boolean indicating success and the created user data or None.
     """
     try:
         client = get_mongo_client()
@@ -559,18 +516,16 @@ def create_user_progress(user_id: str) -> bool:
         existing_user_progress = user_progress_collection.find_one({"user_id": user_id})
         existing_user = users_collection.find_one({"login_code": user_id})
         
-        if existing_user_progress or existing_user:
+        if existing_user:
             print(f"[Error] User {user_id} already exists")
-            return False
         
-        # Create user in users collection
-        user_data = {
-            "login_code": user_id,
-            "last_login": datetime.now(),
-            "total_study_time": 0,
-            "created_at": datetime.now()
-        }
-        users_collection.insert_one(user_data)
+        if existing_user_progress:
+            print(f"[Error] User progress already exists for {user_id} ")
+            return False
+
+        # Create user in users collection if it does not exist
+        if not existing_user:
+            create_user(user_id)
         
         # Get modules data to create appropriate progress structure
         modules_data = get_cached_modules_data()
@@ -623,10 +578,10 @@ def create_user_progress(user_id: str) -> bool:
         user_progress_collection.insert_one(default_data)
         
         print(f"[Success] Created user {user_id} with initialized progress data")
-        return True
+        return (True, default_data)
     except Exception as e:
         print(f"[Error] Exception in create_user_progress: {str(e)}")
-        return False
+        return (False, None)
 
 def list_users() -> List[Dict]:
     """

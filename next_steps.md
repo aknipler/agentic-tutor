@@ -1,0 +1,9 @@
+# This is a prioritised list of next steps for the project. Each dot point is it's own action item. Work from top to bottom. When an item is completed, append it to build_log.md (no need to read build_log.md just append it) and remove it from this document.
+
+- The tutor is Socratic for 3 concepts, then mid-session will stop being Socratic. While in Socratic mode, performance is good and follow-up questions are seamless. Hints are sufficiently convincing. However, Socratic behaviour is lost at some point, and it starts behaving like traditional ChatGPT. It will go back to Socratic for the next prompt if asked (but will only last 1 prompt). It also randomly changes the answer structure.
+- Chats from previous sessions are not displayed after loading back in. (i.e. logout/login again)
+- LaTex module does not work (equations are written in text, with latex syntax).
+- Assessor questions get flagged as red, orange, green but competencies in the tutor (Module 1, Module 2 etc.) interface do not change colours. 
+- Assessor is very harsh on giving level 2. Level 1 is easily obtained, even if the wrong words are used, and already classifies as a green tick. 
+
+- Pre 22/07/2026 implementation initialised user_module_progress modules -> questions with a list of questions. PRQ001 had 12 questions (correct) in the format index: object (i.e. 12: Object) but also had question_id: Object. Don't know why. To simplify and use abstracted functions that already exist, I replaced the hardcoded creation of user progress in get_user_progress with the function create_user_progress which already existed. This is a noticed discrepancy. 
