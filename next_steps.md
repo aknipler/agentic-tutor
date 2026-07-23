@@ -1,9 +1,10 @@
 # This is a prioritised list of next steps for the project. Each dot point is it's own action item. Work from top to bottom. When an item is completed, append it to build_log.md (no need to read build_log.md just append it) and remove it from this document.
 
-- The tutor is Socratic for 3 concepts, then mid-session will stop being Socratic. While in Socratic mode, performance is good and follow-up questions are seamless. Hints are sufficiently convincing. However, Socratic behaviour is lost at some point, and it starts behaving like traditional ChatGPT. It will go back to Socratic for the next prompt if asked (but will only last 1 prompt). It also randomly changes the answer structure.
-- Chats from previous sessions are not displayed after loading back in. (i.e. logout/login again)
-- LaTex module does not work (equations are written in text, with latex syntax).
-- Assessor questions get flagged as red, orange, green but competencies in the tutor (Module 1, Module 2 etc.) interface do not change colours. 
+
+- Assessor does not use prompt/assessor.md, nor does it inject learning outcomes / competent response requirements into assessment (these would be taken from prompts/assessor.md Competency Areas) 
+- questions are not added to modules_data. There is the draft-topic-questions.md file, but the questions are not added to the modules_data. The tutor will generate a question if there is no question in the modules_data, but it is preferred that the lecturers review and approve the questions in draft-topic-questions.md and add them to modules_data.
 - Assessor is very harsh on giving level 2. Level 1 is easily obtained, even if the wrong words are used, and already classifies as a green tick. 
+- When submitting the answer for the question, it always shows "Error saving assessment results” message. (Note: I am not sure if this was for the login codes that did not have a user_progress created in the database.) (Mac OS)
 
 - Pre 22/07/2026 implementation initialised user_module_progress modules -> questions with a list of questions. PRQ001 had 12 questions (correct) in the format index: object (i.e. 12: Object) but also had question_id: Object. Don't know why. To simplify and use abstracted functions that already exist, I replaced the hardcoded creation of user progress in get_user_progress with the function create_user_progress which already existed. This is a noticed discrepancy. 
+- The tutor conversation output shows the entire conversation history for that module. Currently feature, would it be preferable just to show the output for that particular competency? 

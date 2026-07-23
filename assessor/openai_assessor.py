@@ -43,6 +43,18 @@ def assess_answer(
         }
     """
     print(f"Assessing answer: {expected_answer}")
+
+    if st.session_state.get('debug_mode', False):
+        st.write(f"Debug: Assessing answer for question: {question}")
+        st.write(f"Debug: Student answer: {answer}")
+        st.write(f"Debug: Expected answer: {expected_answer}")
+        st.write(f"Debug: Success criteria: {success_criteria}")
+        if image_data_list:
+            st.write(f"Debug: Number of images provided: {len(image_data_list)}")
+        else:
+            st.write("Debug: No images provided.")
+        st.write(f"Debug: Using model: {model}")
+
     # Initialize OpenAI client
     client = initialize_openai_client()
     if not client:
@@ -68,7 +80,10 @@ Format your response strictly as:
 Competency Level: [level]
 Feedback: [feedback]
 
-Be generous with you compency level rating. When it is unclear if the student has partial understanding or full understanding, give them the benefit of the doubt and give them a full competency level.
+Be generous with your competency level rating. When it is unclear if the student has partial understanding or full understanding, give them the benefit of the doubt and give them a full competency level.
+
+Formatting: Wrap inline math in $...$ and block equations in $$...$$ (and explicitly not \(...\)/\[...\]).
+
 """
 
     # Add success criteria to the context if provided
@@ -112,6 +127,9 @@ Context for Assessment:
 Question: {question}
 
 Expected Answer: {expected_answer}{success_criteria_text}"""
+        
+
+
         messages.append({"role": "system", "content": system_prompt})
 
         # User message combining student answer and images

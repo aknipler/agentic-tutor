@@ -146,8 +146,12 @@ def run_assessment(user_id: str, module_id: str, question_index: int, question_k
             answer=answer_text,
             expected_answer=question_info.get("expected_answer", "No expected answer provided."),
             image_data_list=image_data_list,
+            model=st.secrets.get("ASSESSOR_MODEL", "gpt-4o-mini"),
             success_criteria=question_info.get("success_criteria", "")
         )
+        # Kept alongside the grading result (not just logged separately) so a
+        # returning student sees what they submitted, not only the feedback on it.
+        assessment["answer_text"] = answer_text
 
         logger.log_submission(
             user_id=user_id,
@@ -166,7 +170,8 @@ def run_assessment(user_id: str, module_id: str, question_index: int, question_k
             feedback=assessment["feedback"],
             status=assessment["status"],
             response_text=assessment["response_text"],
-            input_image_data=assessment["input_image_data"]
+            input_image_data=assessment["input_image_data"],
+            answer_text=assessment["answer_text"]
         )
 
         st.session_state[question_key]["assessment"] = assessment
@@ -176,6 +181,12 @@ def run_assessment(user_id: str, module_id: str, question_index: int, question_k
         # Drop the cached progress, else the page keeps serving pre-submission
         # state until the cache expires.
         get_module_data.clear()
+
+        # The tutor's module pages cache user progress in session_state with no
+        # expiry (utils.tutor.interface.get_cached_user_progress), so without this
+        # their competency colours would keep showing pre-submission state for the
+        # rest of the session.
+        st.session_state.pop("cached_user_progress", None)
 
         # Rerun so the results render once, below, from the database.
         st.rerun()
@@ -358,17 +369,30 @@ def render_question(question_id: str, question_info: Dict, user_id: str, module_
             st.success("Your answer has been assessed!")
             st.session_state[question_key]["just_assessed"] = False
 
-        # Display previous feedback if available
+        # Display previous feedback if available. Gate on attempts, not on
+        # competency_level > 0: a graded level-0 answer (attempted but judged as
+        # showing no understanding) still has real feedback worth showing - the
+        # old `competency_level > 0` check hid it, which looked like "previous
+        # attempts aren't loaded" even though they were sitting in the DB.
         print(f"[DEBUG] assessment: {assessment}")
-        if assessment and assessment.get("competency_level", 0) > 0:
+        if assessment and assessment.get("attempts", 0) > 0:
             with st.container(border=True):
                 st.subheader("Assessment Results")
+
+                # Submissions logged before this field existed won't have it -
+                # in that case just skip rather than claim no answer was given.
+                submitted_answer = assessment.get("answer_text")
+                if submitted_answer:
+                    st.write("Your Answer:")
+                    quoted = "\n".join(f"> {line}" for line in submitted_answer.splitlines()) or "> "
+                    st.markdown(quoted)
+
                 competency_level = assessment.get("competency_level", 0)
                 # Convert competency level to progress (0->0.33, 1->0.66, 2->1.0)
                 progress = competency_level / 2
                 st.progress(progress)
                 competency_text = {
-                    0: "Not Attempted",
+                    0: "Needs Improvement",
                     1: "Partial Understanding",
                     2: "Full Understanding"
                 }.get(competency_level, "Unknown")

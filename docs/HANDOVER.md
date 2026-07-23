@@ -47,22 +47,14 @@ form, storing the result in `st.session_state`. Note the comparison is also plai
 constant-time — acceptable for a prototype guard against accidental clicks, but it is not a
 security control and should not be described as one.
 
-### 2. Waiting on the lecturers
-
-- **Class list** (student emails) — needed before semester start to generate real login codes
-  with `scripts/create_users.py`. Until then only the three `PRQ00x` defaults exist.
-- **Tutorial slides** — promised but never delivered. Would be useful supplementary
-  vector-store content, particularly for module 2 (see below).
-- **Weeks 4+** — competencies, questions and slides, if the subject is extended.
-
-### 3. Draft topic questions need review
+### 2. Draft topic questions need review
 
 `docs/draft-topic-questions.md` holds an authored opening question for each of the 30 topics.
 None are in the database yet. Topics without a `question` field work fine — the tutor generates
 an opener from the topic description — so this is an improvement, not a blocker. Have the
 lecturers skim them, then add the approved ones as a `question` field per topic and reload.
 
-### 4. Known rough edges
+### 3. Known rough edges
 
 - **Navigating mid-assessment loses the answer.** Changing page while grading is in flight
   abandons the request and clears the text box. The assessor page now warns about this; making
@@ -78,7 +70,7 @@ lecturers skim them, then add the approved ones as a `question` field per topic 
 - **`admin.py` links vector stores by title**, the last title-keyed write in the codebase.
   `scripts/setup_vector_stores.py` links by `index` and is the safer path.
 
-### 5. Not started
+### 4. Not started
 
 - **Deployment.** Target is Streamlit Community Cloud; secrets go in the app's Secrets settings
   as TOML. Not yet deployed.

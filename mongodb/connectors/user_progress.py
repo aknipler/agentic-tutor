@@ -710,10 +710,11 @@ def get_user_progress_details(user_id: str) -> Dict:
 def save_assessment_results(user_id: str, module_id: str, question_index: int,
                            competency_level: int, feedback: str, status: str,
                            response_text: str,
-                           input_image_data: Optional[List[bytes]] = None) -> bool:
+                           input_image_data: Optional[List[bytes]] = None,
+                           answer_text: Optional[str] = None) -> bool:
     """
     Save assessment results for a specific question to the database.
-    
+
     Args:
         user_id: The user's ID
         module_id: The module ID (as a string)
@@ -723,7 +724,11 @@ def save_assessment_results(user_id: str, module_id: str, question_index: int,
         status: Question status (completed, in_progress)
         response_text: Raw response text from the assessment API
         input_image_data: List of image bytes provided by the user
-        
+        answer_text: The student's own submitted answer text (what they typed,
+            or the confirmed transcript for a spoken answer) - kept alongside
+            the grading result so a returning student sees what they submitted,
+            not just the feedback on it.
+
     Returns:
         bool: True if the operation was successful, False otherwise
     """
@@ -774,10 +779,14 @@ def save_assessment_results(user_id: str, module_id: str, question_index: int,
             "attempts": current_attempts + 1,
             "last_attempt": datetime.now()
         }
-        
+
         # Only add image data if it exists
         if bson_image_data:
             question_data["input_image_data"] = bson_image_data
+
+        # Only add answer_text if provided (keeps existing docs/callers valid)
+        if answer_text is not None:
+            question_data["answer_text"] = answer_text
         
         print(f"[DEBUG] New question data: {question_data}")
         
