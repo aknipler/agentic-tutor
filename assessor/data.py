@@ -68,9 +68,10 @@ def update_question_progress(user_id: str, module_id: str, question_index: int, 
 def save_assessment_results(user_id: str, module_id: str, question_index: int,
                             competency_level: int, feedback: str, status: str,
                             response_text: str,
-                            input_image_data: Optional[List[bytes]] = None) -> None:
+                            input_image_data: Optional[List[bytes]] = None,
+                            answer_text: Optional[str] = None) -> None:
     """Save assessment results for a specific question
-    
+
     This is a wrapper around the database connector function.
 
     Args:
@@ -82,25 +83,27 @@ def save_assessment_results(user_id: str, module_id: str, question_index: int,
         status: Question status (completed, in_progress)
         response_text: Raw response text from the assessment API
         input_image_data: List of image bytes provided by the user
+        answer_text: The student's own submitted answer text
     """
     # Convert question index to question_id format (1-based) for MongoDB storage
     question_id = str(int(question_index) + 1)
-    
+
     print(f"[DEBUG] Saving assessment results - User: {user_id}, Module: {module_id}, Question: {question_id} (index: {question_index})")
     print(f"[DEBUG] Competency Level: {competency_level}, Status: {status}")
-    
+
     # Delegate to the centralized database connector function
     result = db_save_assessment_results(
-        user_id, 
+        user_id,
         module_id,
         question_index,
         competency_level,
         feedback,
         status,
         response_text,
-        input_image_data
+        input_image_data,
+        answer_text
     )
-    
+
     if not result:
         st.error("Error saving assessment results")
 

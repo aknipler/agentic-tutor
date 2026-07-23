@@ -1,0 +1,242 @@
+[
+  {
+    "lecture": 1,
+    "lecture_title": "Probability, Reliability and Quality",
+    "topics": {
+      "Definition of reliability": {
+        "learning_outcomes": [
+          "Reliability engineering reduces the likelihood, frequency, and consequences of unwanted product or system behaviours.",
+          "Reliability is assessed under specified conditions and over a defined time.",
+          "Reliability does not mean complete elimination of failure."
+        ]
+      },
+      "Fundamental reliability functions": {
+        "learning_outcomes": [
+          "Interpret cumulative probability of failure by time.",
+          "Interpret the reliability function.",
+          "Explain why probability of failure generally increases and reliability decreases over time."
+        ]
+      },
+      "Rated life and reliability-based decisions": {
+        "learning_outcomes": [
+          "Define rated life.",
+          "Relate rated life to replacement, inspection, maintenance, and servicing decisions."
+        ]
+      },
+      "Expressing a reliability requirement": {
+        "learning_outcomes": [
+          "Formulate requirements using maximum acceptable failure probability or minimum acceptable reliability.",
+          "Include time and operating or loading conditions.",
+          "Explain reliability escapes and why failures before rated life require investigation."
+        ]
+      },
+      "Failure types across the product life cycle": {
+        "learning_outcomes": [
+          "Distinguish early-life, normal-life, and end-of-life failures.",
+          "Link early-life failures to manufacturing defects, assembly errors, or material flaws.",
+          "Link normal-life failures to random events.",
+          "Link end-of-life failures to degradation such as wear, corrosion, or fatigue."
+        ]
+      },
+      "Definition and dimensions of quality": {
+        "learning_outcomes": [
+          "Understand quality engineering as design, control, assurance, and improvement.",
+          "Distinguish quality engineering from inspection alone.",
+          "Recognise the dimensions of performance, features, reliability, durability, conformance, serviceability, aesthetics, and perceived quality."
+        ]
+      },
+      "Turnbacks and non-conformance": {
+        "learning_outcomes": [
+          "Define turnbacks.",
+          "Distinguish correction, rework, scrap, and return to an earlier process stage."
+        ]
+      },
+      "Tolerances and yield": {
+        "learning_outcomes": [
+          "Interpret lower and upper specification limits.",
+          "Determine whether an individual unit conforms.",
+          "Calculate scrap rate and yield.",
+          "Express high-volume defect rates in parts per million."
+        ]
+      },
+      "Manufacturing outcome distributions": {
+        "learning_outcomes": [
+          "Interpret fitted probability distributions.",
+          "Relate process mean and spread to specification limits.",
+          "Identify conforming and non-conforming regions.",
+          "Interpret short-term yield."
+        ]
+      },
+      "Process capability": {
+        "learning_outcomes": [
+          "Compare inspection-based screening with process improvement.",
+          "Explain why 100% inspection does not guarantee zero escapes.",
+          "Interpret process potential and process capability indices.",
+          "Explain the effect of process spread and mean shift.",
+          "Interpret indicative capability levels near 1.00, 1.33, 1.67, and 2.00 while recognising that required thresholds depend on context.",
+          "Read process capability reports."
+        ]
+      },
+      "Key quality ideas": {
+        "learning_outcomes": [
+          "Explain why meeting specifications does not necessarily imply high customer value or high performance.",
+          "Distinguish product requirements from process conformance.",
+          "Explain why short-term capability may not represent long-term production.",
+          "Recognise effects of drift, tool wear, environmental change, material variation, and trends."
+        ]
+      }
+    }
+  },
+  {
+    "lecture": 2,
+    "lecture_title": "Inspections and Processes",
+    "topics": {
+      "Inspection methods": {
+        "learning_outcomes": [
+          "Compare visual inspection, metrology, and go/no-go measurement.",
+          "Evaluate speed, cost, repeatability, measurement detail, and suitability for process control."
+        ]
+      },
+      "Production control": {
+        "learning_outcomes": [
+          "Explain production control as a feedback process.",
+          "Compare measured outputs with desired values.",
+          "Explain why direct measurement supports trend detection and earlier intervention.",
+          "Interpret the purpose of control charts and control limits."
+        ]
+      },
+      "Manufacturing data and statistics": {
+        "learning_outcomes": [
+          "Explain the value of collecting process inputs and outputs.",
+          "Interpret correlation matrices.",
+          "Recognise that correlation supports investigation but does not alone establish causation."
+        ]
+      },
+      "Production system metrics": {
+        "learning_outcomes": [
+          "Define production rate, demand rate, cycle time, and takt time.",
+          "Explain why net production rate must meet or exceed demand.",
+          "Explain why cycle time must remain below that time."
+        ]
+      },
+      "Sources of defects": {
+        "learning_outcomes": [
+          "Identify incorrect parts, missing parts, incorrect installation, equipment malfunction, material variation, contamination, and handling damage.",
+          "Explain how higher production speed may increase defects and reduce net output."
+        ]
+      },
+      "Quality philosophy": {
+        "learning_outcomes": [
+          "Explain the role of consistency and standard operating procedures.",
+          "Distinguish inspection-centred and process-centred approaches."
+        ]
+      },
+      "Process focus": {
+        "learning_outcomes": [
+          "Interpret process maps.",
+          "Identify activities, decisions, inputs, outputs, and rework loops.",
+          "Explain the purpose and components of FMEA.",
+          "Identify failure modes, effects, causes, severity, occurrence, detection, existing controls, and recommended actions."
+        ]
+      }
+    }
+  },
+  {
+    "lecture": 3,
+    "lecture_title": "ANOVA and Gauge Repeatability and Reproducibility",
+    "topics": {
+      "ANOVA generalities": {
+        "learning_outcomes": [
+          "Define ANOVA.",
+          "Identify appropriate applications.",
+          "Explain comparison of variation between groups with unexplained variation.",
+          "Distinguish one-way, two-way, and higher-order ANOVA.",
+          "Explain main effects and interactions."
+        ]
+      },
+      "One-way ANOVA": {
+        "learning_outcomes": [
+          "Identify response, factor, and levels.",
+          "Formulate null and alternative hypotheses.",
+          "State significance level, risk level, and sample size."
+        ]
+      },
+      "ANOVA table": {
+        "learning_outcomes": [
+          "Interpret source, sum of squares, degrees of freedom, mean square, F-statistic, and p-value.",
+          "Distinguish between-group and within-group variation.",
+          "Explain the F-statistic.",
+          "Make a correct decision using p-value and significance level.",
+          "Explain the need for post-hoc analysis after a significant result."
+        ]
+      },
+      "Model adequacy and residual analysis": {
+        "learning_outcomes": [
+          "Interpret residuals.",
+          "Check randomness, constant variance, approximate normality, and independence.",
+          "Investigate outliers.",
+          "Interpret curvature, trends, and systematic patterns.",
+          "Consider missing terms, interactions, transformations, and time effects.",
+          "Use mean square error and adjusted coefficient of determination as supplementary indicators."
+        ]
+      },
+      "Two-way ANOVA": {
+        "learning_outcomes": [
+          "Identify two categorical predictors and one continuous response.",
+          "Explain main effects.",
+          "Explain and interpret interaction terms."
+        ]
+      },
+      "Measurement error": {
+        "learning_outcomes": [
+          "Explain that observed variability contains process and measurement variability.",
+          "Explain why large measurement variation can lead to incorrect decisions.",
+          "Describe the goals of measurement system analysis."
+        ]
+      },
+      "Measurement system characteristics": {
+        "learning_outcomes": [
+          "Distinguish accuracy, bias, resolution, repeatability, reproducibility, stability, and linearity."
+        ]
+      },
+      "Precision": {
+        "learning_outcomes": [
+          "Distinguish precision from accuracy.",
+          "Explain precision as closeness among repeated measurements."
+        ]
+      },
+      "Stability": {
+        "learning_outcomes": [
+          "Explain drift in measurement bias or variation over time.",
+          "Explain why repeated Gauge R&R studies may be used to monitor stability."
+        ]
+      },
+      "Linearity": {
+        "learning_outcomes": [
+          "Explain changing accuracy or precision across the device operating range."
+        ]
+      },
+      "Process-variation-based metrics": {
+        "learning_outcomes": [
+          "Interpret precision-to-total variation.",
+          "Interpret percent R&R.",
+          "Explain what portion of total observed variation is due to measurement error.",
+          "Interpret discrimination or number of distinct categories."
+        ]
+      },
+      "Gauge study interpretation": {
+        "learning_outcomes": [
+          "Interpret P/TV, %R&R, and discrimination.",
+          "Use the indicative ratings:",
+          "Unacceptable: P/TV greater than 30%, %R&R greater than 9%, discrimination below 5.",
+          "Bad: P/TV 10–30%, %R&R 2–9%, discrimination 5–10.",
+          "Good: P/TV 0–10%, %R&R 0–2%, discrimination above 10.",
+          "Explain the common 3 operators × 3 repeats × 10 parts study design, giving 90 runs.",
+          "Explain that P/TV addresses suitability for inspection relative to tolerance.",
+          "Explain that %R&R addresses suitability for detecting process shifts relative to process variation.",
+          "Interpret Gauge R&R tables and plots."
+        ]
+      }
+    }
+  }
+]

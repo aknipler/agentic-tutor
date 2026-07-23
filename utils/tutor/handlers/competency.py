@@ -344,17 +344,20 @@ def get_next_non_competent_topic(module_id: Union[str, int]) -> Optional[Dict[st
                 # so both are looked up with .get and passed on to the tutor prompt.
                 question = ""
                 description = ""
+                learning_outcomes = ""
                 for module_topic in module_data.get("topics", []):
                     if module_topic.get("name") == topic_name:
                         question = module_topic.get("question", "")
                         description = module_topic.get("description", "")
+                        learning_outcomes = module_topic.get("learning_outcomes", "")
                         break
                 result = {
                     "name": topic_name,
                     "progress": progress,
                     "status": topic_data.get("status", "not_started"),
                     "description": description,
-                    "question": question
+                    "question": question,
+                    "learning_outcomes": learning_outcomes
                 }
                 print(f"[Next Topic] Found non-competent topic: {result}")
                 return result

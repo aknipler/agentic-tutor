@@ -19,6 +19,15 @@ def verify_user_login(login_code):
         
         # Check if user exists
         user = users_collection.find_one({"login_code": login_code})
+
+        # Check if user_progress exists for the user
+        if user:
+            user_progress_collection = db["user_progress"]
+            user_progress = user_progress_collection.find_one({"user_id": login_code})
+            if not user_progress:
+                # If user exists but no progress, create default progress
+                from .user_progress import create_user_progress
+                create_user_progress(login_code)
         
         if user:
             return True
