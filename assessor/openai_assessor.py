@@ -13,17 +13,24 @@ def initialize_openai_client() -> OpenAI:
     
     return OpenAI(api_key=api_key)
 
+def _is_reasoning_model(model: str) -> bool:
+    """gpt-5 and o-series models accept `reasoning_effort`; anything else (e.g.
+    gpt-4o-mini) rejects it outright as an unsupported parameter."""
+    return model.startswith(("gpt-5", "o1", "o3", "o4"))
+
 def assess_answer(
     question: str,
     answer: str,
     expected_answer: str,
     image_data_list: Optional[List[bytes]] = None,
     model: str = "gpt-4o-mini",
-    success_criteria: str = ""
+    success_criteria: str = "",
+    max_completion_tokens: int = 1000,
+    reasoning_effort: Optional[str] = "low"
 ) -> Dict:
     """
     Assess a student's answer using OpenAI API
-    
+
     Args:
         question: The question text
         answer: The student's answer text
@@ -31,6 +38,13 @@ def assess_answer(
         image_data_list: Optional list of image bytes for images the student uploaded
         model: The OpenAI model to use for assessment
         success_criteria: The success criteria for the question (optional)
+        max_completion_tokens: Cap on the model's total output (visible feedback +
+            hidden reasoning, for reasoning models). Measured against gpt-5-nano:
+            a normal assessment used ~170 tokens at reasoning_effort="low", so
+            1000 leaves real margin without being reckless on cost.
+        reasoning_effort: Passed straight through to reasoning models
+            (gpt-5-nano, o-series); ignored by non-reasoning models like
+            gpt-4o-mini, which don't accept the parameter at all.
         
     Returns:
         Dictionary containing assessment results:
@@ -151,12 +165,19 @@ Expected Answer: {expected_answer}{success_criteria_text}"""
         
         messages.append({"role": "user", "content": user_content})
 
-        # Call OpenAI Chat Completions API
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            max_tokens=300 # Add a reasonable max_tokens limit
-        )
+        # Call OpenAI Chat Completions API. `max_tokens` is rejected outright
+        # by reasoning models (gpt-5, o-series) - `max_completion_tokens` is
+        # the current parameter and works for both reasoning and non-reasoning
+        # models, so it's used unconditionally.
+        completion_kwargs = {
+            "model": model,
+            "messages": messages,
+            "max_completion_tokens": max_completion_tokens,
+        }
+        if reasoning_effort and _is_reasoning_model(model):
+            completion_kwargs["reasoning_effort"] = reasoning_effort
+
+        response = client.chat.completions.create(**completion_kwargs)
 
         # Extract content from the response
         response_text = response.choices[0].message.content if response.choices else ""

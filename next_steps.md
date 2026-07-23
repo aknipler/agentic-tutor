@@ -1,6 +1,6 @@
 # This is a prioritised list of next steps for the project. Each dot point is it's own action item. Work from top to bottom. When an item is completed, append it to build_log.md (no need to read build_log.md just append it) and remove it from this document.
 
-
+- Update README.md
 - Assessor does not use prompt/assessor.md, nor does it inject learning outcomes / competent response requirements into assessment (these would be taken from prompts/assessor.md Competency Areas) 
 - questions are not added to modules_data. There is the draft-topic-questions.md file, but the questions are not added to the modules_data. The tutor will generate a question if there is no question in the modules_data, but it is preferred that the lecturers review and approve the questions in draft-topic-questions.md and add them to modules_data.
 - Assessor is very harsh on giving level 2. Level 1 is easily obtained, even if the wrong words are used, and already classifies as a green tick. 
