@@ -147,7 +147,9 @@ def run_assessment(user_id: str, module_id: str, question_index: int, question_k
             expected_answer=question_info.get("expected_answer", "No expected answer provided."),
             image_data_list=image_data_list,
             model=st.secrets.get("ASSESSOR_MODEL", "gpt-4o-mini"),
-            success_criteria=question_info.get("success_criteria", "")
+            success_criteria=question_info.get("success_criteria", ""),
+            max_completion_tokens=int(st.secrets.get("ASSESSOR_MAX_COMPLETION_TOKENS", 1000)),
+            reasoning_effort=st.secrets.get("ASSESSOR_REASONING_EFFORT", "low")
         )
         # Kept alongside the grading result (not just logged separately) so a
         # returning student sees what they submitted, not only the feedback on it.
