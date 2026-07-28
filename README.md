@@ -116,7 +116,8 @@ real store id back to the module.
 `PRQ001`–`PRQ003` are seeded automatically **only if the `users` collection is empty**. For a
 real cohort, put a `data/classlist.csv` with an `Email` column in place and run
 `scripts/create_users.py` — it generates a random code per student plus 15 spares, writes
-`data/user_codes.csv`, and creates each student's progress record.
+`data/user_codes.csv`, and creates each student's progress record. Alternatively, use `scripts/generate_and_load_codes.py`
+to generate a random set of codes and load them into the database.
 
 Run it *after* step 3: progress records are initialised against whatever modules exist at that
 moment. It has no re-run guard, so running it twice mints a second set of codes.
