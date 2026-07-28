@@ -1,6 +1,5 @@
 import streamlit as st
-from utils.cache import get_cached_modules_data
-from utils.modules import find_module_by_index
+from utils.cache import get_cached_module
 from utils.tutor import render_tutor_interface
 
 # The only thing this page hard-codes: which module it is. Matched against the
@@ -12,19 +11,11 @@ if "logged_in" not in st.session_state or not st.session_state.logged_in:
     st.warning("Please login from the Home page to access the module.")
     st.stop()
 
-# Load module data
-@st.cache_data(ttl=10)
-def load_module_data():
-    """Load this module's document from the cached modules data"""
-    try:
-        return find_module_by_index(get_cached_modules_data(), MODULE_ID)
-    except Exception as e:
-        st.error(f"Error loading module data: {str(e)}")
-        return None
-
 def main():
-    # Load module data
-    module_data = load_module_data()
+    # Load module data. Cached in utils/cache.py and keyed by MODULE_ID - a
+    # per-page copy of this lookup collides with the other module pages' copies
+    # in Streamlit's cache and serves them each other's module document.
+    module_data = get_cached_module(MODULE_ID)
     if not module_data:
         st.info(
             f"Module {MODULE_ID} isn't available yet. It will appear here once the "

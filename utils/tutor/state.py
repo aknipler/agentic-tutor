@@ -52,14 +52,26 @@ class TutorState:
             st.session_state[old_key] = st.session_state[key]
     
     @staticmethod
-    def get_current_topic() -> Dict[str, Any]:
-        """Get current topic"""
-        return st.session_state.get("current_topic", {})
-    
+    def _get_topic_key(module: str) -> str:
+        """Get the standardized current-topic key for a module"""
+        return f"current_topic_{module}"
+
     @staticmethod
-    def set_current_topic(topic: Dict[str, Any]) -> None:
-        """Set current topic"""
-        st.session_state["current_topic"] = topic
+    def get_current_topic(module: str) -> Dict[str, Any]:
+        """Get the topic this module is currently teaching.
+
+        Scoped per module, like the chat history and the topic cutoff. It used to
+        be one session-wide `current_topic` key shared by every module page, so
+        opening a second module and coming back left the first one tracking the
+        other module's topic - which is what sent competency writes, the model's
+        "Current Topic" and the conversation log to the wrong topic.
+        """
+        return st.session_state.get(TutorState._get_topic_key(module), {})
+
+    @staticmethod
+    def set_current_topic(module: str, topic: Dict[str, Any]) -> None:
+        """Set the topic this module is currently teaching"""
+        st.session_state[TutorState._get_topic_key(module)] = topic
     
     @staticmethod
     def get_transition_state(module: str) -> bool:
@@ -115,7 +127,7 @@ class TutorState:
     def get_conversation_context(module: str, topic: str) -> List[Dict[str, Any]]:
         """Get conversation context for API calls (with cutoff and limit)"""
         chat_history = TutorState.get_chat_history(module)
-        current_topic = TutorState.get_current_topic()
+        current_topic = TutorState.get_current_topic(module)
         current_topic_name = current_topic.get("name", "")
         
         # If no topic is specified but we have a current topic, use that

@@ -1,12 +1,12 @@
 [project]
 name = "agentic-tutor"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.2.0"
+description = "An adaptive learning and assessing agentic chatbot tool for a graduate mechanical engineering subject (MCEN90059) at The University of Melbourne"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "nltk==3.9.1",
-    "openai==1.66.3",
+    "openai==2.7.2",
     "pymongo>=4.7",
-    "streamlit==1.40.2",
+    "streamlit==1.52.0",
 ]

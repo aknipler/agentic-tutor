@@ -1,10 +1,13 @@
 """Handlers for competency-related operations"""
+import difflib
+import re
 from typing import Dict, Any, NamedTuple, Optional, Union, List
 import streamlit as st
 import json
 from mongodb.connectors import (
     get_topic_competency,
     update_competency,
+    update_last_topic,
     get_user_progress,
     update_user_progress
 )
@@ -25,20 +28,204 @@ class ToolCallResult(NamedTuple):
     competency for X" - moved the student on, so a write that never landed still
     produced a green "you've completed the topic" message, and the next topic was
     then chosen from progress data that still said the topic was unfinished.
+
+    `topic_switched` is the canonical name of a topic the *student* explicitly
+    asked to move to, resolved against this module's own topic list. Like
+    `topic_completed` it is only ever set once the request has been validated, and
+    it is the only thing that moves a student off-sequence.
     """
     output: str
     topic_completed: Optional[str] = None
+    topic_switched: Optional[str] = None
+
+
+def get_module_topics(module_id: Union[str, int]) -> List[Dict[str, Any]]:
+    """Return this module's topic documents (dicts only), or []."""
+    from ..interface import get_cached_modules_data as _get_modules
+    module_data = find_module_by_index(_get_modules(), str(module_id))
+    if not module_data:
+        return []
+    return [topic for topic in module_data.get("topics", []) if isinstance(topic, dict)]
+
+
+def get_module_topic_names(module_id: Union[str, int]) -> List[str]:
+    """Return this module's topic names, in module order."""
+    return [topic.get("name", "") for topic in get_module_topics(module_id) if topic.get("name")]
 
 
 def topic_belongs_to_module(module_id: Union[str, int], topic_name: str) -> bool:
     """Whether `topic_name` is one of this module's own topics."""
-    from ..interface import get_cached_modules_data as _get_modules
+    return topic_name in get_module_topic_names(module_id)
+
+
+def _normalise_topic_name(name: str) -> str:
+    """Reduce a topic name to a comparable form: lowercase, alphanumerics only."""
+    return re.sub(r"[^a-z0-9]+", " ", str(name).casefold()).strip()
+
+
+def resolve_topic_name(module_id: Union[str, int], requested: str) -> Optional[str]:
+    """Map whatever the student called a topic onto this module's canonical name.
+
+    Students ask for topics the way they say them out loud ("can we jump to
+    ANOVA", "the gauge R&R one"), and the model passes that wording straight
+    through. An exact string match would reject nearly all of it - the same trap
+    that made the old `topic_name` argument on update_topic_competency silently
+    drop competency writes - so match progressively: exact, then normalised, then
+    containment either way, then a close-match fallback. Returns None when nothing
+    matches well enough, so the caller can ask the student rather than guess.
+    """
+    if not requested:
+        return None
+
+    names = get_module_topic_names(module_id)
+    if not names:
+        return None
+
+    if requested in names:
+        return requested
+
+    target = _normalise_topic_name(requested)
+    if not target:
+        return None
+
+    normalised = {name: _normalise_topic_name(name) for name in names}
+
+    for name, candidate in normalised.items():
+        if candidate == target:
+            return name
+
+    # Containment: "ANOVA" is inside "Analysis of Variance (ANOVA)", and "the
+    # ANOVA table topic" contains a shorter topic name. Only when it picks out one
+    # topic - a bare "reliability" sits inside half the module, and guessing which
+    # one they meant is worse than asking.
+    contained = [
+        name for name, candidate in normalised.items()
+        if candidate and (candidate in target or target in candidate)
+    ]
+    if len(contained) == 1:
+        return contained[0]
+
+    # Abbreviations students actually use: "gauge r&r" -> "Gauge Repeatability and
+    # Reproducibility". Every word they said has to prefix a word of the topic
+    # name, in order, so it stays a match on the real words rather than a vague
+    # resemblance.
+    abbreviated = [
+        name for name, candidate in normalised.items()
+        if _is_abbreviation_of(target, candidate)
+    ]
+    if len(abbreviated) == 1:
+        return abbreviated[0]
+
+    # Last resort, and deliberately strict. Switching to the wrong topic is the
+    # exact failure this whole path exists to prevent - a confident near-miss
+    # would send the student's next competency write to a topic they never asked
+    # for - so anything short of a close match returns None and the tutor asks.
+    close = difflib.get_close_matches(target, list(normalised.values()), n=1, cutoff=0.75)
+    if close:
+        for name, candidate in normalised.items():
+            if candidate == close[0]:
+                return name
+
+    return None
+
+
+def _is_abbreviation_of(said: str, topic: str) -> bool:
+    """Whether each word of `said` prefixes a later word of `topic`, in order."""
+    said_words = said.split()
+    topic_words = topic.split()
+    if not said_words or len(said_words) > len(topic_words):
+        return False
+
+    position = 0
+    for word in said_words:
+        while position < len(topic_words) and not topic_words[position].startswith(word):
+            position += 1
+        if position == len(topic_words):
+            return False
+        position += 1
+    return True
+
+
+def build_topic_payload(module_id: Union[str, int], topic_name: str,
+                        progress_data: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+    """Build the topic dict the tutor flow passes around, for one named topic.
+
+    One shape, built in one place: `name`, the student's current `progress`/
+    `status`, and the lecturer-supplied `description`, `question` and
+    `learning_outcomes` that the prompt builders read. Pass `progress_data` in
+    when the caller has already read it this turn; otherwise it is read fresh,
+    because every caller is at a decision point about what to teach next.
+    """
+    from ..interface import get_cached_modules_data as _get_modules, get_fresh_user_progress
+
     module_data = find_module_by_index(_get_modules(), str(module_id))
     if not module_data:
-        return False
-    return any(
-        isinstance(topic, dict) and topic.get("name") == topic_name
-        for topic in module_data.get("topics", [])
+        return None
+
+    topic = next(
+        (t for t in module_data.get("topics", [])
+         if isinstance(t, dict) and t.get("name") == topic_name),
+        None
+    )
+    if topic is None:
+        return None
+
+    if progress_data is None:
+        progress_data = get_fresh_user_progress()
+
+    module_index = str(module_data.get("index", 0))
+    topics_progress = (progress_data or {}).get("modules", {}).get(module_index, {}).get("topics", {})
+    topic_progress = topics_progress.get(topic_name, {})
+
+    return {
+        "name": topic_name,
+        "progress": topic_progress.get("progress", 0),
+        "status": topic_progress.get("status", "not_started"),
+        "description": topic.get("description", ""),
+        "question": topic.get("question", ""),
+        "learning_outcomes": topic.get("learning_outcomes", "")
+    }
+
+
+def format_module_topic_overview(module_id: Union[str, int], current_topic_name: str) -> str:
+    """List this module's topics, and where the student is up to, for the prompt.
+
+    The model cannot switch a student to a topic it doesn't know the name of: with
+    only "Current Topic" in the instructions it had to invent a name from the
+    student's wording. Sending the canonical list, marked up with each topic's
+    status, lets it pass an exact name to `switch_topic` and lets it answer "what
+    else is in this module?" without guessing.
+    """
+    from ..interface import get_cached_user_progress
+
+    topics = get_module_topics(module_id)
+    if not topics:
+        return ""
+
+    progress_data = get_cached_user_progress() or {}
+    topics_progress = progress_data.get("modules", {}).get(str(module_id), {}).get("topics", {})
+
+    lines = []
+    for topic in topics:
+        name = topic.get("name", "")
+        if not name:
+            continue
+        if name == current_topic_name:
+            state = "current topic"
+        else:
+            progress = topics_progress.get(name, {}).get("progress", 0)
+            state = {0: "not started", 1: "in progress", 2: "completed"}.get(progress, "not started")
+        lines.append(f"- {name} ({state})")
+
+    if not lines:
+        return ""
+
+    return (
+        "## Topics in this module\n"
+        + "\n".join(lines)
+        + "\n\nThese are the exact topic names. Students do not have to work through them in "
+        "order. Use `switch_topic` only when the student explicitly asks to move to a different "
+        "one, and pass the name exactly as written above."
     )
 
 
@@ -70,30 +257,122 @@ def is_module_complete(module_id: Union[str, int]) -> bool:
     )
 
 
+def set_active_topic(module_id: Union[str, int], topic: Optional[Dict[str, Any]]) -> None:
+    """Make `topic` the module's current topic, for this session and the next one.
+
+    The single place a topic becomes current. Session state is what the rest of
+    the turn reads; the write to the student's record is what makes the choice
+    outlive the session, since nothing else on that record distinguishes "the
+    topic they are working on" from "the first one they haven't finished".
+    """
+    TutorState.set_current_topic(str(module_id), topic or {})
+
+    topic_name = (topic or {}).get("name", "")
+    user_id = st.session_state.get("user_id", "")
+    if topic_name and user_id:
+        update_last_topic(user_id, str(module_id), topic_name)
+
+
+def get_resume_topic(module_id: Union[str, int]) -> Optional[Dict[str, Any]]:
+    """The topic to put the student on when they open this module.
+
+    Where they left off, if that is still one of the module's topics, and the
+    first unfinished topic otherwise - which is also the answer for every student
+    whose record predates `last_topic`, and for anyone who has never chosen a
+    topic for themselves. A finished module resumes nowhere, as before: the page
+    congratulates them and disables the chat.
+    """
+    from ..interface import get_fresh_user_progress
+
+    progress_data = get_fresh_user_progress() or {}
+    last_topic = progress_data.get("modules", {}).get(str(module_id), {}).get("last_topic")
+
+    # is_module_complete reads the cached snapshot, which get_fresh_user_progress
+    # has just refreshed.
+    if last_topic and topic_belongs_to_module(module_id, last_topic) and not is_module_complete(module_id):
+        resumed = build_topic_payload(module_id, last_topic, progress_data)
+        if resumed:
+            print(f"[Resume Topic] Module {module_id} resuming where the student left off: {last_topic!r}")
+            return resumed
+
+    print(f"[Resume Topic] Module {module_id} has no topic to resume ({last_topic!r}) - using the first unfinished one")
+    return get_next_non_competent_topic(module_id)
+
+
 def ensure_current_topic_for_module(module_id: Union[str, int]) -> Optional[Dict[str, Any]]:
     """Return the topic this module is teaching, resyncing session state if it drifted.
 
-    `current_topic` is a single session-wide key shared by every module page, and a
-    page only sets it while initialising its chat history - so visiting a second
-    module and coming back leaves the first module tracking the *other* module's
-    topic. Every turn then writes competency against that foreign topic (in the
-    other module's progress), tells the model the wrong "Current Topic", and files
-    the conversation log under it. Until the key is scoped per module, re-point it
-    at this module's own next topic whenever it has drifted, before anything else
-    in the turn reads it.
+    The current topic is now stored per module (`current_topic_{module_id}`), so
+    the cross-module drift this used to repair - one shared key, overwritten by
+    whichever module page ran last - can no longer happen. It stays as the single
+    place a turn resolves its topic: it still recovers a session that has no topic
+    yet, or one naming a topic that has since been renamed or removed from the
+    module data, before anything in the turn reads it.
+
+    A topic the student explicitly switched to is left alone even when earlier
+    topics are unfinished - it belongs to this module, so it is honoured, not
+    "corrected" back to the first incomplete one.
     """
-    current = TutorState.get_current_topic() or {}
+    current = TutorState.get_current_topic(str(module_id)) or {}
     topic_name = current.get("name", "")
 
     if topic_name and topic_belongs_to_module(module_id, topic_name):
         return current
 
     print(f"[Current Topic] {topic_name!r} is not a topic of module {module_id} - resyncing")
-    repaired = get_next_non_competent_topic(module_id)
+    repaired = get_resume_topic(module_id)
     if repaired:
-        TutorState.set_current_topic(repaired)
+        set_active_topic(module_id, repaired)
         print(f"[Current Topic] Resynced module {module_id} to: {repaired.get('name')}")
     return repaired
+
+
+def handle_topic_switch(args: Dict[str, Any], module_id: Union[str, int]) -> ToolCallResult:
+    """Handle the student asking to work on a different topic in this module.
+
+    Students do not work through a module in order, and until now nothing in the
+    app registered that: the tutor would happily *talk* about the topic they asked
+    for while the application still believed the old topic was current, so the
+    per-topic prompt, the learning outcomes and - worst - every competency write
+    went to the topic they had left behind.
+
+    Validation happens here, not in the model: the requested name is resolved
+    against this module's own topics, and a name that can't be resolved returns
+    the topic list to the model so it can ask, rather than switching to a guess.
+    """
+    requested = str(args.get("topic_name") or "").strip()
+    reason = args.get("reason")
+    print(f"[Topic Switch] Requested topic: {requested!r} in module {module_id} (reason: {reason})")
+
+    if not requested:
+        return ToolCallResult(
+            "Topic not switched - no topic name was supplied. Ask the student which topic they "
+            "want to move to."
+        )
+
+    resolved = resolve_topic_name(module_id, requested)
+    if not resolved:
+        names = get_module_topic_names(module_id)
+        print(f"[Topic Switch] Could not resolve {requested!r}; module topics are {names}")
+        return ToolCallResult(
+            f"Topic not switched - '{requested}' does not match a topic in this module. "
+            f"The topics are: {'; '.join(names)}. Ask the student which of these they meant "
+            "and do not switch until they confirm."
+        )
+
+    current_topic_name = (TutorState.get_current_topic(str(module_id)) or {}).get("name", "")
+    if resolved == current_topic_name:
+        print(f"[Topic Switch] Already on {resolved}, nothing to do")
+        return ToolCallResult(
+            f"Already teaching {resolved} - no switch needed. Continue with this topic."
+        )
+
+    print(f"[Topic Switch] Resolved {requested!r} -> {resolved!r}")
+    return ToolCallResult(
+        f"Switched to {resolved}. The application will introduce the new topic and ask the "
+        "opening question, so do not write one yourself.",
+        topic_switched=resolved
+    )
 
 def batch_update_competencies(user_id: str, updates: List[Dict[str, Any]]) -> str:
     """Batch update multiple competencies at once"""
@@ -182,7 +461,7 @@ def handle_competency_update(args: Dict[str, Any], user_id: str, module_id: Unio
         print(f"[Competency Update Error] Level out of range: {level}")
         return ToolCallResult("Failed to update competency - level must be 0, 1 or 2")
 
-    current_topic = TutorState.get_current_topic() or {}
+    current_topic = TutorState.get_current_topic(str(module_id)) or {}
     topic_name = current_topic.get("name", "")
 
     # Safety net. get_bot_response resyncs the current topic at the start of every
@@ -198,6 +477,27 @@ def handle_competency_update(args: Dict[str, Any], user_id: str, module_id: Unio
 
     if claimed_topic and claimed_topic != topic_name:
         print(f"[Competency Update] Ignoring supplied topic_name {claimed_topic!r}; current topic is {topic_name!r}")
+
+    # Competency only goes up. Asked to leave a topic, the model will summarise
+    # the state of it - and reads "no substantive attempt yet" as something to
+    # record, calling update_topic_competency(0) on a topic the student had
+    # already reached level 1 on. That erases work they actually did, and the
+    # green ticks on the progress page are the record students trust. Nothing
+    # the model observes in a single turn is evidence that earlier work stopped
+    # counting, so a lower level is dropped rather than written.
+    existing_level = 0
+    try:
+        existing = get_topic_competency(user_id, topic_name) or {}
+        existing_level = int(existing.get("progress", 0) or 0)
+    except Exception as e:
+        print(f"[Competency Update] Could not read the current level for {topic_name}: {str(e)}")
+
+    if level < existing_level:
+        print(f"[Competency Update] Refusing to lower {topic_name} from {existing_level} to {level}")
+        return ToolCallResult(
+            f"{topic_name} is already recorded at level {existing_level}, so it was left there - "
+            "competency is never lowered. Continue the conversation."
+        )
 
     print(f"[Competency Update] Starting update for topic: {topic_name}, level: {level}, reason: {reason}")
 
@@ -458,26 +758,11 @@ def get_next_non_competent_topic(module_id: Union[str, int],
             print(f"[Next Topic] Topic progress: {progress}")
             
             if progress < 2:  # Not completed
-                # Pull the topic's description (and optional diagnostic question) from
-                # the module data. PRQ topics carry `description` but no `question`,
-                # so both are looked up with .get and passed on to the tutor prompt.
-                question = ""
-                description = ""
-                learning_outcomes = ""
-                for module_topic in module_data.get("topics", []):
-                    if module_topic.get("name") == topic_name:
-                        question = module_topic.get("question", "")
-                        description = module_topic.get("description", "")
-                        learning_outcomes = module_topic.get("learning_outcomes", "")
-                        break
-                result = {
-                    "name": topic_name,
-                    "progress": progress,
-                    "status": topic_data.get("status", "not_started"),
-                    "description": description,
-                    "question": question,
-                    "learning_outcomes": learning_outcomes
-                }
+                # Pulls the topic's description (and optional diagnostic question)
+                # from the module data. PRQ topics carry `description` but no
+                # `question`, so both are looked up with .get before being passed
+                # on to the tutor prompt.
+                result = build_topic_payload(module_id, topic_name, progress_data)
                 print(f"[Next Topic] Found non-competent topic: {result}")
                 return result
         

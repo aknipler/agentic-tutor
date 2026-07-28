@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "tutor-app",
-      "runtimeExecutable": ".venv/Scripts/streamlit.exe",
-      "runtimeArgs": ["run", "Home.py", "--server.port", "8502", "--server.headless", "true"],
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": ["-u", "-m", "streamlit", "run", "Home.py", "--server.port", "8502", "--server.headless", "true"],
       "port": 8502
     }
   ]
