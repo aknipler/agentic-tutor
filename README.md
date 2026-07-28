@@ -31,6 +31,18 @@ Two OpenAI system prompts drive the behaviour: `prompts/tutor.md` (Socratic ques
 never hand over answers) and `prompts/assessor.md` (grade against the expected answer).
 Both are plain Markdown — edit them directly to change tone or grading strictness.
 
+### The topic loop
+
+A module page teaches one topic at a time. The app decides which topic is current and tells the
+model; the model never names one itself. When it judges the student competent it calls
+`update_topic_competency(level, reason)` with level 2, and **only once that write is confirmed**
+does the page congratulate the student and move on — to the topic after the current one, wrapping
+back to fill any gaps left earlier in the module. Once every topic is at level 2 the module is
+finished and its chat input is disabled.
+
+Chat history is replayed from the conversation log on login, so a student resumes mid-topic
+rather than starting the topic over.
+
 ### Modules are keyed by `index`
 
 Every module document carries an `index` (1, 2, 3, …). **That is the only identifier used
@@ -62,10 +74,14 @@ file is silently ignored. Create `.streamlit/secrets.toml`:
 OPENAI_API_KEY = "sk-..."
 MONGODB_CONNECTION_STRING = "mongodb+srv://your_atlas_user:<db_password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority"
 MONGODB_DATABASE_NAME = "your_database_name"
+MONGODB_LOGS_DATABASE_NAME = "agentic_tutor_logs"
 ADMIN_PASSWORD = "your_admin_password"
 ```
 
 - Replace `<db_password>` placeholder etc.
+- `MONGODB_LOGS_DATABASE_NAME` is the separate database conversation transcripts are
+  written to (`mongodb/logger.py`). It may be the same database as
+  `MONGODB_DATABASE_NAME` if you'd rather keep everything together.
 - `admin.py` and `assessor/openai_assessor.py` read `OPENAI_API_KEY` from the **environment**,
   not from secrets. Export it too: `$env:OPENAI_API_KEY="sk-..."` (PowerShell).
 - On Streamlit Community Cloud, paste the same TOML into the app's Secrets settings.
@@ -168,6 +184,17 @@ Created on first login, keyed by `str(index)`:
 Competency is `0` = not started, `1` = in progress/partial, `2` = completed/full, used
 consistently by the tutor, the assessor, and both prompts.
 
+Modules and questions are keyed by index, but **topic progress is keyed by the topic name**.
+Renaming a topic in `modules_live` therefore orphans every student's progress for it — treat
+topic names as stable identifiers once a cohort has started.
+
+### Conversation logs
+
+A second database, named by `MONGODB_LOGS_DATABASE_NAME`, holds `user_conversations` (every
+tutor turn, keyed by user, module `index` and topic name) and `user_submissions`. It is not
+purely an audit trail: the tutor reads `user_conversations` back on login to restore chat
+history, so the two databases are both live.
+
 ---
 
 ## Course material
@@ -209,8 +236,10 @@ The app has no subject-specific logic. To repoint it:
    module number is at the start (`L04 ...`, `Module 4 - ...`), then run
    `scripts/setup_vector_stores.py`.
 3. **Prompts.** Edit `prompts/tutor.md` and `prompts/assessor.md`. Keep the
-   `update_topic_competency(topic_name, level, reason)` tool contract and the 0/1/2 scale —
-   the code depends on both.
+   `update_topic_competency(level, reason)` tool contract and the 0/1/2 scale — the code depends
+   on both. The tool deliberately takes no topic argument: the app supplies the current topic.
+   Don't reintroduce one, and don't let the prompt announce that a topic is finished — moving on
+   is the app's decision, taken only after the write succeeds.
 4. **Pages.** Add or remove `pages/N_Module_X.py`. Each is a ~45-line shim whose only
    subject-specific line is `MODULE_ID = "4"`; copy one and change that number. The file's
    numeric prefix controls sidebar order.
@@ -237,6 +266,19 @@ you can add pages ahead of content.
   by `index` and is the safer path.
 - **Orphaned progress**: if you remove a module, students keep a progress record for it. Clear
   those with `scripts/cleanup_orphan_progress.py`.
+- **Login codes are the only credential.** They double as the student's `user_id`, so anyone
+  with another student's code has that student's progress. Fine as a class convenience; don't
+  mistake it for authentication.
+
+## Known issues and future work
+
+`next_steps.md` is the working backlog — a prioritised list of known issues, deferred cleanups
+and open questions, each naming the file it lives in. Work from the top; when an item is done,
+append it to `build_log.md` and remove it from `next_steps.md`.
+
+Read it before starting on this repo. Several entries describe deliberate decisions rather than
+bugs (historical progress data left unrepaired, for instance), and knowing which is which saves
+re-diagnosing something already understood.
 
 ## Repository layout
 
@@ -244,10 +286,12 @@ you can add pages ahead of content.
 |---|---|
 | `Home.py` | Entry point — login |
 | `pages/` | Progress page, module pages, assessor |
-| `utils/tutor/` | Tutor chat: prompt assembly, streaming, competency tool calls |
+| `utils/tutor/` | Tutor chat: prompt assembly, streaming, competency tool calls, topic advance |
 | `utils/modules.py` | Module lookup by `index` |
+| `utils/status.py` | The 0/1/2 scale's on-screen form — one definition, shared by every page |
 | `assessor/` | Answer submission, OpenAI grading, results UI |
 | `mongodb/connectors/` | All database access |
+| `mongodb/logger.py` | Conversation and submission transcripts (separate logs database) |
 | `prompts/` | Tutor and assessor system prompts |
 | `scripts/` | Setup and maintenance utilities |
 | `knowledge/` | Source course material (staging for vector stores) |

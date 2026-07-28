@@ -3,6 +3,8 @@ from typing import Optional, Dict, Any, List
 import streamlit as st
 from datetime import datetime
 
+from .config.settings import TutorConfig
+
 class TutorState:
     """Manages the state of the tutor system"""
     
@@ -30,11 +32,20 @@ class TutorState:
         if key not in st.session_state:
             st.session_state[key] = []
         st.session_state[key].append(message)
-        
-        # Limit history size
-        if len(st.session_state[key]) > 50:  # MAX_CHAT_HISTORY
-            st.session_state[key] = st.session_state[key][-50:]
-            
+
+        # Limit history size. The topic cutoff is an absolute index into this same
+        # list, so whatever is dropped off the front has to come off the cutoff too
+        # - otherwise it keeps pointing at a position that has slid out from under
+        # it. Left unadjusted it drifts past the end of the list, and from then on
+        # get_conversation_context returns nothing: no message window and no
+        # previous_response_id, so the tutor answers every turn having forgotten
+        # the whole topic.
+        overflow = len(st.session_state[key]) - TutorConfig.MAX_CHAT_HISTORY
+        if overflow > 0:
+            st.session_state[key] = st.session_state[key][overflow:]
+            TutorState.shift_topic_cutoff_index(module, overflow)
+
+
         # Synchronize with old key if it exists
         old_key = f"chat_history_{module}"
         if old_key in st.session_state:
@@ -83,6 +94,16 @@ class TutorState:
         print(f"[Topic Cutoff] Set cutoff index for module {module} to {cutoff_index}")
     
     @staticmethod
+    def shift_topic_cutoff_index(module: str, dropped: int) -> None:
+        """Move the cutoff back by `dropped` messages after trimming the history."""
+        topic_cutoff_key = f"topic_cutoff_index_{module}"
+        if topic_cutoff_key in st.session_state:
+            shifted = max(0, st.session_state[topic_cutoff_key] - dropped)
+            print(f"[Topic Cutoff] Trimmed {dropped} message(s) from module {module}; "
+                  f"cutoff {st.session_state[topic_cutoff_key]} -> {shifted}")
+            st.session_state[topic_cutoff_key] = shifted
+
+    @staticmethod
     def get_topic_cutoff_index(module: str) -> int:
         """Get the cutoff index for the current topic"""
         topic_cutoff_key = f"topic_cutoff_index_{module}"
@@ -103,7 +124,17 @@ class TutorState:
             
         # Get the cutoff index for the current topic
         cutoff_index = TutorState.get_topic_cutoff_index(module)
-        
+
+        # A cutoff at or past the end of the history can't be right - it would mean
+        # the current topic has no messages at all, including the question the tutor
+        # just asked. Sessions that were running before the trim fix above have this
+        # stored state; rather than send the model an empty context, fall back to the
+        # whole history and let the last-5 window do the trimming.
+        if chat_history and cutoff_index >= len(chat_history):
+            print(f"[Conversation Context] Cutoff {cutoff_index} is past the end of "
+                  f"{len(chat_history)} messages - ignoring it for this turn")
+            cutoff_index = 0
+
         # Only consider messages from the current topic (after cutoff)
         current_topic_history = chat_history[cutoff_index:]
         

@@ -527,7 +527,8 @@ def main():
         if st.button("Create User"):
             if new_user_id:
                 try:
-                    if create_user_progress(new_user_id):
+                    created, _ = create_user_progress(new_user_id)
+                    if created:
                         st.success(f"User '{new_user_id}' created successfully!")
                         st.rerun()
                     else:

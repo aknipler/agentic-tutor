@@ -3,7 +3,7 @@ from datetime import datetime, time
 
 from mongodb.connectors.user_management import create_user
 from .base import get_mongo_client
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from .modules import get_cached_modules_data
 from bson.binary import Binary
 
@@ -290,8 +290,11 @@ def update_competency(user_id, topic_name, level):
         
         if st.session_state.get('debug_mode', False):
             st.write(f"Debug: Update result: {update_result.modified_count} document(s) modified")
-        
-        return update_result.modified_count > 0
+
+        # matched, not modified: re-writing the same level is a successful no-op as
+        # far as callers are concerned, and reporting it as a failure would make the
+        # tutor withhold a topic transition the student has genuinely earned.
+        return update_result.matched_count > 0
         
     except Exception as e:
         if st.session_state.get('debug_mode', False):
@@ -495,16 +498,24 @@ def batch_update_user_progress(user_id: str, updates: List[Dict[str, Any]]) -> b
         print(f"[Error] Exception in batch_update_user_progress: {str(e)}")
         return False
 
-def create_user_progress(user_id: str) -> bool:
+def create_user_progress(user_id: str) -> Tuple[bool, Optional[Dict]]:
     """
     Create a new user and initialize their progress data for all modules.
     Also adds the user to the users collection.
-    
+
     Args:
         user_id (str): The ID of the user to create.
-        
+
     Returns:
-        tuple: A tuple containing a boolean indicating success and the created user data or None.
+        Tuple[bool, Optional[Dict]]: (created, progress document). `created` is
+        False if the user already had progress or creation failed, and the
+        document is None in both of those cases.
+
+        Every return path is this shape. It used to return a bare `False` when
+        progress already existed, which crashed get_user_progress's
+        `status, user_data = create_user_progress(...)` unpack, while callers
+        written as `if create_user_progress(...)` silently read the `(False, None)`
+        failure as success - a non-empty tuple is truthy.
     """
     try:
         client = get_mongo_client()
@@ -521,7 +532,7 @@ def create_user_progress(user_id: str) -> bool:
         
         if existing_user_progress:
             print(f"[Error] User progress already exists for {user_id} ")
-            return False
+            return (False, None)
 
         # Create user in users collection if it does not exist
         if not existing_user:

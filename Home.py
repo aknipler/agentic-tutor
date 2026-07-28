@@ -90,6 +90,13 @@ if st.session_state.logged_in:
     
     # Logout button
     if st.button("Logout"):
+        # Clear everything, not just the login flags. Chat histories, the cached
+        # progress snapshot, the current topic and the topic-transition flags all
+        # used to survive a logout, so the next login in the same browser tab
+        # resumed the previous student's tutor state - both wrong and a privacy
+        # problem on a shared machine. Note st.rerun() re-runs the script in the
+        # same session; it does not reset session state, so this has to be explicit.
+        st.session_state.clear()
         st.session_state.logged_in = False
         st.session_state.user_id = None
         st.rerun()
