@@ -36,6 +36,5 @@
 - Conversation logs written before the transition-logging fix are filed under the wrong topic
   (e.g. PRQ002 has module 1 / "Inspection Methods" holding the opening question for
   "Fundamental Reliability Functions"). New sessions log correctly; old entries will replay oddly.
-
 - Pre 22/07/2026 implementation initialised user_module_progress modules -> questions with a list of questions. PRQ001 had 12 questions (correct) in the format index: object (i.e. 12: Object) but also had question_id: Object. Don't know why. To simplify and use abstracted functions that already exist, I replaced the hardcoded creation of user progress in get_user_progress with the function create_user_progress which already existed. This is a noticed discrepancy. 
-- The tutor conversation output shows the entire conversation history for that module. Currently feature, would it be preferable just to show the output for that particular competency? 
+- The tutor conversation output shows only the current topic history for a module. Add a way for users to see their convresation history with each topic in a module. Maybe when they click the topic, it shows the history for that topic.
