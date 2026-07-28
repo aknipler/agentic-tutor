@@ -1,6 +1,7 @@
 import streamlit as st
 from mongodb.connectors import get_user_progress, update_user_progress, get_modules_data
 from utils.modules import sort_modules_by_index
+from utils.status import get_status_emoji, get_status_from_progress
 from datetime import datetime
 
 BASE_URL = "http://localhost:8501/"
@@ -10,34 +11,16 @@ if "logged_in" not in st.session_state or not st.session_state.logged_in:
     st.warning("Please login from the Home page to access your progress.")
     st.stop()
 
-def get_status_emoji(status):
-    """Convert status to emoji"""
-    status_map = {
-        "completed": "✅",
-        "in_progress": "🟠",
-        "not_started": "🔴"
-    }
-    return status_map.get(status, "🔴")
-
-def get_status_from_progress(progress):
-    """Convert numeric progress (0, 1, 2) to status string"""
-    progress_map = {
-        0: "not_started",
-        1: "in_progress",
-        2: "completed"
-    }
-    return progress_map.get(progress, "not_started")
-
 # Load module data from MongoDB
-@st.cache_data(ttl=10)
 def load_modules_data():
-    """Load module information from MongoDB"""
+    """Load module information from MongoDB.
+
+    No @st.cache_data wrapper: get_modules_data already caches in session state,
+    and stacking a second, differently-expiring layer on top of it only made it
+    harder to reason about which copy of the data a page was showing.
+    """
     try:
-        # Use session state to cache modules data
-        if "cached_modules_data" not in st.session_state:
-            st.session_state.cached_modules_data = get_modules_data()
-        
-        data = st.session_state.cached_modules_data
+        data = get_modules_data()
         if st.session_state.get('debug_mode', False):
             st.write("Debug: Modules data loaded:", data)
         return data
@@ -46,9 +29,14 @@ def load_modules_data():
         return {"modules": []}
 
 # Load user progress data from MongoDB
-@st.cache_data(ttl=5)
 def load_user_progress():
-    """Load user progress from MongoDB"""
+    """Load user progress from MongoDB.
+
+    Read every time this page runs. It was cached for 5 seconds on a function
+    taking no arguments, so a student who finished a topic and came straight here
+    could be shown the state from before their own work - which is what made
+    completed topics look like they hadn't registered.
+    """
     user_id = st.session_state.user_id
     try:
         data = get_user_progress(user_id)

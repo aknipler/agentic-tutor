@@ -1,20 +1,25 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime
 from pymongo import MongoClient
 from pymongo.collection import Collection
 import streamlit as st
 
 class UserLogger:
-    def __init__(self, db_name: str = "agentic_tutor_logs"):
+    def __init__(self, db_name: Optional[str] = None):
         """
         Initialize the logger with MongoDB connection details from Streamlit secrets.
-        
+
         Args:
-            db_name (str): Name of the database to use
+            db_name (str, optional): Database to log to. Defaults to
+                MONGODB_LOGS_DATABASE_NAME from secrets. Conversation logs live in
+                their own database, separate from MONGODB_DATABASE_NAME, but the
+                name is still configuration - it is never hard-coded here.
         """
         # Get MongoDB connection details from Streamlit secrets
         connection_string = st.secrets["MONGODB_CONNECTION_STRING"]
-        
+        if db_name is None:
+            db_name = st.secrets["MONGODB_LOGS_DATABASE_NAME"]
+
         self.client = MongoClient(connection_string)
         self.db = self.client[db_name]
         self.conversations: Collection = self.db["user_conversations"]
@@ -111,6 +116,34 @@ class UserLogger:
             upsert=True
         )
     
+    def get_conversation(self, user_id: str, module: str, topic: str) -> List[List[str]]:
+        """Retrieve one conversation's message pairs for a module/topic pair.
+
+        Projected server-side rather than pulling every conversation the student
+        has ever had and filtering in Python: this runs on each module page load,
+        and a student's full transcript across every topic grows without bound.
+
+        Args:
+            user_id (str): Unique identifier for the user
+            module (str): The module's index, as a string
+            topic (str): Canonical topic name
+
+        Returns:
+            List[List[str]]: [user_message, assistant_message] pairs, oldest first.
+            Empty if this module/topic pair has no logged conversation.
+        """
+        doc = self.conversations.find_one(
+            {
+                "user_id": user_id,
+                "conversations": {"$elemMatch": {"module": module, "topic": topic}}
+            },
+            {"conversations.$": 1}
+        )
+        if not doc:
+            return []
+        conversations = doc.get("conversations", [])
+        return conversations[0].get("conversation", []) if conversations else []
+
     def get_user_conversations(self, user_id: str) -> List[Dict[str, Any]]:
         """
         Retrieve all conversations for a user.

@@ -20,14 +20,19 @@ def verify_user_login(login_code):
         # Check if user exists
         user = users_collection.find_one({"login_code": login_code})
 
-        # Check if user_progress exists for the user
+        # Check if progress exists for the user. The collection is
+        # `user_module_progress` - this read used to name a `user_progress`
+        # collection that has never existed, so it found nothing every time and
+        # re-ran creation on every login for every user.
         if user:
-            user_progress_collection = db["user_progress"]
+            user_progress_collection = db["user_module_progress"]
             user_progress = user_progress_collection.find_one({"user_id": login_code})
             if not user_progress:
                 # If user exists but no progress, create default progress
                 from .user_progress import create_user_progress
-                create_user_progress(login_code)
+                created, _ = create_user_progress(login_code)
+                if not created:
+                    print(f"[Error] Could not create progress for {login_code} at login")
         
         if user:
             return True

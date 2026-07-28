@@ -49,7 +49,8 @@ def create_users_from_classlist():
     
     for email, code in email_to_code.items():
         try:
-            if create_user_progress(code):
+            created, _ = create_user_progress(code)
+            if created:
                 created_users.append((email, code))
             else:
                 failed_users.append((email, code))
