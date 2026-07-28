@@ -11,12 +11,36 @@
   that branch also doesn't clear `in_topic_transition`. The filler text stays in the transcript
   permanently. Decide whether the 5s guard is still needed at all now that the transition only
   fires on a confirmed level-2 write - if it is, queue the message instead of discarding it.
-- `current_topic` is a single session-wide key shared by every module page
-  (utils/tutor/state.py), while chat history is keyed per module. Visiting a second module and
-  returning leaves the first tracking the other module's topic. `ensure_current_topic_for_module`
-  resyncs it on every turn so no data is corrupted, but the key should be scoped per module
-  (`current_topic_{module_id}`) like `messages_module_{id}` and `topic_cutoff_index_{id}` -
-  roughly a dozen mechanical call sites.
+- **Tutor turns fail intermittently: `openai==1.66.3` is not compatible with Python 3.14.** The
+  student sees "Sorry, something went wrong on my end"; the log records `'typing.Union' object has
+  no attribute '__discriminator__' and no __dict__ for setting new attributes`. The SDK caches
+  discriminated-union metadata by doing `setattr` on the `typing.Union` object itself
+  (`openai/_models.py:668`), and on 3.14 those objects are immutable, so any response whose shape
+  reaches that code path dies. It is content-dependent, not random: the same message can succeed
+  or fail depending on what the model returns, which is why it reads as flaky. Both pins are ours
+  (`pyproject.toml` requires-python >=3.14, openai==1.66.3). It is not a corner case: on this
+  interpreter *every* discriminated union in 1.66.3 is broken - measured 62 of 62 raising,
+  including `ResponseStreamEvent` and `ResponseOutputItem` - so any response whose parsing reaches
+  one dies. Upstream replaced the setattr with a module-level `DISCRIMINATOR_CACHE`; the same
+  measurement against 2.7.2 on 3.14 is 157 resolved, 0 raising.
+
+  Upgrading to `openai==2.7.2` was checked against every SDK surface this repo uses and nothing
+  breaks: `responses.create` (all eight keyword arguments, streamed and not, with function tools
+  and `file_search`), `chat.completions.create` with `max_completion_tokens` + `reasoning_effort`,
+  `audio.transcriptions.create`, `files.create`, the whole `vector_stores` surface including
+  `file_batches.upload_and_poll`, `client.beta.assistants`, and `from openai.types.vector_store
+  import VectorStore`. All four live call shapes were run against the real API on 2.7.2. The one
+  breaking change in 2.0.0 widens `ResponseFunctionToolCallOutputItem.output` to accept a list;
+  we only ever build `function_call_output` as *input*, never read that field off a response.
+  When doing it, change the pin in **both** `pyproject.toml` and `requirements.txt` (they already
+  disagree about Streamlit - pyproject says 1.40.2, requirements says 1.52.0, installed is 1.52.0 -
+  and Streamlit Community Cloud reads requirements.txt), then `uv lock`.
+
+  Worth checking whether this is what the earlier "tutor returns blank response" reports were.
+- The Assistants API shuts down **26 August 2026** (deprecated 26/08/2025). `admin.py`'s assistants
+  tab (`client.beta.assistants.list/create/delete`) stops working then. Nothing else uses it - the
+  tutor is on the Responses API, and vector stores are unaffected - so the fix is to drop that tab
+  rather than migrate anything.
 - Dead code to remove: `batch_update_competencies` (utils/tutor/handlers/competency.py, never
   called); `invalidate_modules_cache` defined in both utils/cache.py and utils/tutor/interface.py
   and called from nowhere; `assessor_url` built in interface.py but unused. `BASE_URL` is

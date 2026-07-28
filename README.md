@@ -40,6 +40,19 @@ does the page congratulate the student and move on — to the topic after the cu
 back to fill any gaps left earlier in the module. Once every topic is at level 2 the module is
 finished and its chat input is disabled.
 
+Students don't have to go in order. Asking the tutor to move ("can we jump to ANOVA?") makes it
+call `switch_topic(topic_name, reason)`; the name is resolved against that module's own topics
+app-side, so a paraphrase or abbreviation still lands, and one that can't be resolved
+unambiguously sends the topic list back to the tutor to ask with rather than being guessed at.
+A switch is what makes the rest of the turn — the prompt, the learning outcomes, the competency
+write — follow the student. Whichever topic they end up on is recorded as `last_topic`, so the
+next session resumes there rather than at the first unfinished topic.
+
+Arriving at a topic is one path, `open_topic`, whether it came from finishing the previous one,
+a switch, or opening the page. A topic that already has a logged conversation resumes from it;
+only a topic with no history gets a freshly generated opening question. Nobody is asked to prove
+themselves twice on work they've already done.
+
 Chat history is replayed from the conversation log on login, so a student resumes mid-topic
 rather than starting the topic over.
 
@@ -175,12 +188,18 @@ Created on first login, keyed by `str(index)`:
   "modules": {
     "1": {
       "progress": 0, "status": "not_started",
+      "last_topic": "Definition of Reliability",
       "topics":    { "Definition of Reliability": { "progress": 0, "status": "not_started" } },
       "questions": { "1": { "status": "not_started", "attempts": 0, "competency_level": 0 } }
     }
   }
 }
 ```
+
+`last_topic` is where the student is up to *by choice*, which competency levels can't express —
+a student who jumped ahead has finished nothing new, but shouldn't be dropped back at the first
+unfinished topic next time they log in. Written on every topic change, read when a module page
+opens, and ignored if the topic no longer exists.
 
 Competency is `0` = not started, `1` = in progress/partial, `2` = completed/full, used
 consistently by the tutor, the assessor, and both prompts.
@@ -241,9 +260,11 @@ The app has no subject-specific logic. To repoint it:
    on both. The tool deliberately takes no topic argument: the app supplies the current topic.
    Don't reintroduce one, and don't let the prompt announce that a topic is finished — moving on
    is the app's decision, taken only after the write succeeds.
-4. **Pages.** Add or remove `pages/N_Module_X.py`. Each is a ~45-line shim whose only
+4. **Pages.** Add or remove `pages/N_Module_X.py`. Each is a ~40-line shim whose only
    subject-specific line is `MODULE_ID = "4"`; copy one and change that number. The file's
-   numeric prefix controls sidebar order.
+   numeric prefix controls sidebar order. Load the module document with
+   `get_cached_module(MODULE_ID)` from `utils/cache.py` — don't give the page its own
+   `@st.cache_data` copy of that lookup (see the note under Notes and limitations).
 5. **Branding.** The title in `Home.py` and the "About the AI Tutor" text in
    `utils/tutor/interface.py`.
 
@@ -260,6 +281,11 @@ you can add pages ahead of content.
 - **Page loads are slow.** Each interaction re-queries MongoDB and re-renders. `get_module_data`
   is cached for 5 minutes to compensate, and is explicitly cleared after a submission so results
   aren't stale.
+- **Never give a page its own `@st.cache_data` copy of a shared lookup.** Streamlit keys a cached
+  function by `__module__`, `__qualname__` and its source text, and *every page script runs as
+  `__main__`* — so identical zero-argument helpers in two pages silently share one cache entry.
+  That is how each module page ended up rendering another module's title and vector store id.
+  Cache once, somewhere importable, keyed by an argument.
 - **`admin.py` requires an admin password in `.streamlit/secrets.toml`**. It is not a security measure, just a guard against
   accidental clicks.
 - **`admin.py` links vector stores to modules by title**, the one remaining title-keyed write.

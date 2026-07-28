@@ -302,6 +302,57 @@ def update_competency(user_id, topic_name, level):
         print(f"[Error] Exception in update_competency: {str(e)}")
         return False
 
+def update_last_topic(user_id, module_id, topic_name):
+    """
+    Record which topic a student is currently on in a module.
+
+    Everything else about where a student is up to is derived from competency
+    levels, which say what they have finished but not what they chose to work on.
+    A student who asks the tutor to jump to a later topic has made a choice that
+    no level records, and without this the next session silently restarts them at
+    the first unfinished topic instead.
+
+    Only written for a module the student already has a progress entry for: a
+    `$set` on a missing path would mint a half-built module record (a last_topic
+    with no topics or questions beside it). The entry is created by
+    create_user_progress on first login and by the first competency write, so in
+    practice it is always there by the time this is called.
+
+    Args:
+        user_id (str): The user's ID
+        module_id (str): The module's 1-based `index`
+        topic_name (str): Name of the topic the student is now on
+
+    Returns:
+        bool: True if the student's record was updated.
+    """
+    try:
+        client = get_mongo_client()
+        db = client[st.secrets["MONGODB_DATABASE_NAME"]]
+        user_progress_collection = db["user_module_progress"]
+
+        module_key = str(module_id)
+        update_result = user_progress_collection.update_one(
+            {"user_id": user_id, f"modules.{module_key}": {"$exists": True}},
+            {
+                "$set": {
+                    f"modules.{module_key}.last_topic": topic_name,
+                    f"modules.{module_key}.last_topic_at": datetime.now(),
+                    "updated_at": datetime.now()
+                }
+            }
+        )
+
+        if update_result.matched_count == 0:
+            print(f"[Last Topic] No module {module_key} entry for {user_id} yet - not recorded")
+            return False
+
+        print(f"[Last Topic] {user_id} module {module_key} -> {topic_name}")
+        return True
+    except Exception as e:
+        print(f"[Error] Exception in update_last_topic: {str(e)}")
+        return False
+
 def get_topic_competency(user_id, topic_name):
     """
     Get a user's competency level for a specific topic, using only topic name.
