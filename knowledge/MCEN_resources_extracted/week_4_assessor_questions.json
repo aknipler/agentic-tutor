@@ -1,0 +1,239 @@
+{
+    "_id": {
+        "$oid": "5ea4d1a3f3dc4dcfaf52cf77"
+    },
+    "title": "Week 4 - Probability, Statistics and Confidence Intervals",
+    "topics": [
+        {
+            "name": "Probability and Manufacturing Uncertainty",
+            "description": "Understand probability as a quantitative representation of uncertainty or belief about whether an event occurs, with values between 0 and 1. Students should be able to interpret probability statements in manufacturing and quality contexts, such as the probability that a produced unit is within specification or defective."
+        },
+        {
+            "name": "Random Experiments, Outcomes, Events and Sample Spaces",
+            "description": "Distinguish a random experiment, trial or run, outcome, event, sample space, and population/universe. Students should recognise that an outcome is an element of the sample space, an event is a set of outcomes, and sample spaces may be binary, countable discrete, or continuous depending on the measured characteristic."
+        },
+        {
+            "name": "Combining Events",
+            "description": "Interpret and use the set operations used for probability events, including intersection, union, difference, complement, the certain event, and the empty or impossible event. Students should be able to translate between event notation and plain-language statements such as 'A and B', 'A or B', and 'A does not occur'."
+        },
+        {
+            "name": "Probability Axioms",
+            "description": "Understand the basic mathematical rules of probability: the sample space has probability 1; event probabilities lie between 0 and 1; and probabilities of mutually exclusive events add when the events are combined by union."
+        },
+        {
+            "name": "Independent Events",
+            "description": "Understand that two events A and B are independent when Pr(A ∩ B) = Pr(A)Pr(B). Students should distinguish independent from dependent events and identify situations in which one trial does or does not influence a subsequent trial."
+        },
+        {
+            "name": "Population, Sample, Parameters and Statistics",
+            "description": "Distinguish a population from a sample and a population parameter from a sample statistic. Students should understand that parameters such as population mean μ and population standard deviation σ describe the population, whereas statistics such as sample mean x̄ and sample standard deviation s are calculated from sampled data and used to estimate population parameters."
+        },
+        {
+            "name": "Numerical Data Types",
+            "description": "Distinguish attribute/discrete data from continuous data. Students should classify pass/fail observations as binary attribute data, defect counts as integer count data, and measured quantities with units as continuous data, and recognise that continuous measurements generally retain more information than attribute data."
+        },
+        {
+            "name": "Graphical Analysis of Data",
+            "description": "Interpret common graphical tools for manufacturing data. Students should recognise that run charts reveal trends over time, scatter plots show patterns of association, boxplots summarise location and spread and help identify extreme values, and histograms show frequency, centring, spread, and shape and may be compared with specification limits."
+        },
+        {
+            "name": "Measures of Central Tendency",
+            "description": "Calculate and interpret the sample mean, median, and mode. Students should understand that the mean uses all values and can be strongly influenced by outliers, whereas the median is less sensitive to extreme values; the mode is the most frequently occurring value."
+        },
+        {
+            "name": "Measures of Variability",
+            "description": "Calculate and interpret range, sample variance, and sample standard deviation. Students should understand that range uses only the minimum and maximum values, variance is based on squared deviations from the mean, and standard deviation is the square root of variance and is expressed in the original measurement units."
+        },
+        {
+            "name": "Variance Addition",
+            "description": "Understand that variances, rather than standard deviations, add when independent sources of variability combine. Students should be able to relate output variance to contributing input variances and obtain the corresponding output standard deviation by taking the square root of the total variance."
+        },
+        {
+            "name": "Quartiles and Percentiles",
+            "description": "Interpret quartiles and percentiles as values dividing ordered data into specified lower and upper proportions. Students should use the interquartile range and percentile ranges to describe spread and connect quartiles with the information shown on a boxplot."
+        },
+        {
+            "name": "Outliers",
+            "description": "Recognise outliers as observations outside the expected pattern of a dataset and understand that they require investigation for special causes rather than automatic deletion. Students should distinguish the base distribution from a separately reported outlier occurrence when a justified special cause is identified."
+        },
+        {
+            "name": "Normality Assessment",
+            "description": "Understand the purpose of normal probability plots and the Anderson-Darling normality test. Students should interpret an approximately straight normal probability plot as evidence consistent with normality and interpret a normality-test p-value in the context of whether there is sufficient evidence to reject a normal model."
+        },
+        {
+            "name": "Distribution Selection for Manufacturing Data",
+            "description": "Associate common data types with appropriate probability distributions: binomial for counts of defectives from pass/fail trials, Poisson for counts of defects, and normal for many continuous measured values arising from measurement and control-limited processes. Students should recognise that other distributions, including lognormal, exponential, Weibull, t, chi-squared, and F, have other applications."
+        },
+        {
+            "name": "Binomial Distribution",
+            "description": "Understand the conditions for a binomial model: a fixed number n of comparable trials, two outcomes per trial, a constant probability p of the outcome of interest, and independent trials. Students should calculate or interpret probabilities for a specified number of defectives in a sample."
+        },
+        {
+            "name": "Poisson Distribution",
+            "description": "Understand the Poisson distribution as a model for defect counts or event counts characterised by a mean rate λ. Students should calculate or interpret the probability of observing a specified number of defects when the Poisson model is appropriate."
+        },
+        {
+            "name": "Normal Distribution and Probability Functions",
+            "description": "Understand the normal distribution as a continuous distribution described by mean μ and standard deviation σ. Students should distinguish probability density from cumulative probability and determine probabilities over intervals using cumulative distribution values."
+        },
+        {
+            "name": "Standard Normal Distribution and Z-Score",
+            "description": "Standardise a normal random variable using Z = (x - μ)/σ and interpret the Z-score as the number of standard deviations a value lies from the mean. Students should use Z-scores and cumulative normal probabilities to estimate proportions above, below, or between specified limits."
+        },
+        {
+            "name": "Sampling Distributions",
+            "description": "Recognise that statistics themselves have sampling distributions. Students should associate the t distribution with inference on sample means when population standard deviation is not known, the chi-squared distribution with sample variance, and the F distribution with ratios of sample variances."
+        },
+        {
+            "name": "Central Limit Theorem",
+            "description": "Understand that sums and averages of independent random variables tend toward a normal distribution as sample size increases, even when the underlying individual-variable distribution is not normal. Students should explain why the Central Limit Theorem enables inference from samples about population characteristics."
+        },
+        {
+            "name": "Standard Error of the Mean",
+            "description": "Understand that the distribution of sample means is centred approximately on the population mean and has a smaller spread than the individual population. Students should calculate and interpret the standard error of the mean, σ_x̄ = σ/√n (or approximately s/√n when σ is estimated), and explain how increasing sample size reduces standard error."
+        },
+        {
+            "name": "Confidence Interval Concept",
+            "description": "Understand a confidence interval as an interval estimate for an unknown population parameter derived from sampling uncertainty. Students should interpret a stated confidence level in repeated-sampling terms and recognise that confidence intervals become more informative as sampling uncertainty is reduced."
+        },
+        {
+            "name": "Confidence Interval for a Mean",
+            "description": "Select and interpret the appropriate confidence interval for a population mean: use a Z-based interval when the population standard deviation σ is known and a t-based interval when σ is unknown and is estimated using the sample standard deviation s. Students should understand the role of sample size and standard error in the interval width."
+        },
+        {
+            "name": "Confidence Intervals for Variability, Rates and Proportions",
+            "description": "Recognise the sampling distributions and interval estimates used for other parameters: chi-squared methods for a single variance or standard deviation, F methods for a ratio of two variances, Poisson-based methods for rates, and binomial-based methods for proportions. Students should interpret whether a reference value such as a variance ratio of 1 lies within a confidence interval and what that implies about evidence of a difference."
+        }
+    ],
+    "tutorial_questions": [
+        {
+            "question_id": "4.1",
+            "question": "A production engineer states that the probability a manufactured unit is out of specification is 0.03. Explain what this probability means and state the corresponding probability that a unit is in specification.",
+            "expected_answer": "Probability quantifies uncertainty on a scale from 0 to 1. Pr(out of specification) = 0.03 means a randomly considered unit has a 3% probability of being out of specification under the stated process conditions. The complementary probability of being in specification is 1 - 0.03 = 0.97, or 97%."
+        },
+        {
+            "question_id": "4.2",
+            "question": "For an inspection process whose result is either Pass or Fail, identify the random experiment, one possible outcome, the sample space, and the event 'the part fails'.",
+            "expected_answer": "The random experiment is inspecting a selected part. A possible outcome is Pass (or Fail). The sample space is S = {Pass, Fail}. The event that the part fails is A = {Fail}, which is a subset of S."
+        },
+        {
+            "question_id": "4.3",
+            "question": "Let A be the event that a part has a scratch and B the event that it is undersized. Explain in words A ∩ B, A ∪ B, Aᶜ, and A \\ B.",
+            "expected_answer": "A ∩ B: the part is scratched and undersized. A ∪ B: the part is scratched or undersized, including both. Aᶜ: the part is not scratched. A \\ B: the part is scratched but not undersized."
+        },
+        {
+            "question_id": "4.4",
+            "question": "State the three basic probability rules presented in the lecture for a sample space S and mutually exclusive events A and B.",
+            "expected_answer": "The rules are: Pr(S) = 1; for any event A, 0 ≤ Pr(A) ≤ 1; and if A and B are mutually exclusive so that A ∩ B = ∅, then Pr(A ∪ B) = Pr(A) + Pr(B)."
+        },
+        {
+            "question_id": "4.5",
+            "question": "Two inspection outcomes A and B have Pr(A)=0.20 and Pr(B)=0.10. If they are independent, calculate Pr(A ∩ B). What feature of independence justifies the calculation?",
+            "expected_answer": "For independent events, Pr(A ∩ B) = Pr(A)Pr(B). Therefore Pr(A ∩ B) = 0.20 × 0.10 = 0.02. The calculation is justified because occurrence of one event does not change the probability of the other under the independence assumption."
+        },
+        {
+            "question_id": "4.6",
+            "question": "A supplier will manufacture parts throughout the next year, but an engineer measures 20 randomly selected parts this week. Distinguish the population, sample, population parameters, and sample statistics in this situation.",
+            "expected_answer": "The population is the full set of supplier parts of interest, including the future production being inferred about. The sample is the 20 measured parts. Population parameters such as μ and σ describe the population and are generally unknown. Sample statistics such as x̄ and s are calculated from the 20 measurements and are used to estimate those population parameters."
+        },
+        {
+            "question_id": "4.7",
+            "question": "Classify each measurement as binary attribute data, count data, or continuous data: (a) pass/fail inspection, (b) number of scratches on a panel, and (c) measured panel thickness in mm.",
+            "expected_answer": "(a) Pass/fail is binary attribute data. (b) Number of scratches is discrete count data. (c) Thickness in mm is continuous measurement data."
+        },
+        {
+            "question_id": "4.8",
+            "question": "Choose the most suitable graphical tool from a run chart, scatter plot, boxplot, or histogram for each purpose: (a) detecting drift with time, (b) checking association between pressure and thickness, (c) comparing distributions across three suppliers, and (d) viewing process centring and spread relative to specifications.",
+            "expected_answer": "(a) Run chart, because it shows measurements in time order and helps reveal trends. (b) Scatter plot, because it displays the relationship between two measured variables. (c) Boxplots, because they compactly compare centre, spread, and extreme values between multiple datasets. (d) Histogram, because it shows the frequency distribution, centring, spread, and shape and can be plotted against specification limits."
+        },
+        {
+            "question_id": "4.9",
+            "question": "For the data 0, 4, 2, 1, 3, 2, 3, 1, 2, 2, calculate the mean, median, and mode. Which measure would be most affected if the value 4 were replaced by 100?",
+            "expected_answer": "The sum is 20, so the mean is 20/10 = 2.0. Sorted data are 0,1,1,2,2,2,2,3,3,4, so the median is the average of the 5th and 6th values = 2. The mode is 2. Replacing 4 by 100 would strongly increase the mean, while the median and mode would change little or not at all; the mean is the measure most sensitive to the extreme value."
+        },
+        {
+            "question_id": "4.10",
+            "question": "Explain the difference between range, sample variance, and sample standard deviation. Why is standard deviation usually easier to interpret than variance?",
+            "expected_answer": "Range is maximum minus minimum and uses only two observations. Sample variance is based on the average squared deviations from the sample mean using the sample variance denominator n-1. Sample standard deviation is the square root of the sample variance. Standard deviation is generally easier to interpret because it has the same physical units as the original measurements, whereas variance has squared units."
+        },
+        {
+            "question_id": "4.11",
+            "question": "Two independent sources contribute standard deviations of 2 units and 3 units to an output. Using variance addition, calculate the combined standard deviation.",
+            "expected_answer": "Variances add for independent sources. The total variance is 2² + 3² = 4 + 9 = 13. Therefore the combined standard deviation is √13 ≈ 3.61 units. Adding standard deviations directly (2 + 3) would not be the method presented in the lecture."
+        },
+        {
+            "question_id": "4.12",
+            "question": "What do the 25th percentile, median, and 75th percentile represent, and how do they relate to the interquartile range shown in a boxplot?",
+            "expected_answer": "The 25th percentile has about 25% of observations at or below it, the median is the 50th percentile, and the 75th percentile has about 75% at or below it. The interquartile range spans from the 25th to the 75th percentile and contains the middle half of the ordered data. A boxplot uses these quantities to display centre and spread."
+        },
+        {
+            "question_id": "4.13",
+            "question": "A single measurement lies far outside the remainder of a manufacturing dataset. According to the lecture, what should an engineer do before removing it from statistical analysis?",
+            "expected_answer": "The observation should be investigated for an engineering or special cause rather than automatically deleted. If a known special cause is established, the outlier may be treated separately and its occurrence reported, while the base distribution is analysed using the appropriate remaining data. The key requirement is justified investigation rather than arbitrary removal."
+        },
+        {
+            "question_id": "4.14",
+            "question": "A normality test gives p = 0.18. At a 0.05 criterion, what conclusion is supported about fitting a normal distribution? Also state what pattern is expected on a normal probability plot when data are approximately normal.",
+            "expected_answer": "Because p = 0.18 is greater than 0.05, there is not sufficient evidence at that criterion to reject the normal model. The data can be treated as consistent with normality for this check. On a normal probability plot, approximately normal data should lie approximately along a straight line."
+        },
+        {
+            "question_id": "4.15",
+            "question": "Match each dataset to the principal distribution used in the lecture: (a) number of defective units in a fixed sample of pass/fail inspections, (b) number of scratches per surface, and (c) a continuously measured dimension influenced by many measurement and process effects.",
+            "expected_answer": "(a) Binomial distribution for counts of defectives from pass/fail trials. (b) Poisson distribution for counts of defects. (c) Normal distribution for many continuous measured values arising from measurement and control-limited processes."
+        },
+        {
+            "question_id": "4.16",
+            "question": "A quality technician samples n = 100 razors. Each razor has the same probability p = 0.005 of being defective, and inspection outcomes are independent. Explain why a binomial model is appropriate and identify its two parameters.",
+            "expected_answer": "A binomial model is appropriate because there is a fixed number of trials, each trial has two outcomes (defective or not defective), the probability of a defective is constant, and trials are treated as independent. The parameters are n = 100 and p = 0.005."
+        },
+        {
+            "question_id": "4.17",
+            "question": "A process produces an average of λ = 0.046 defects per inspected unit under a Poisson model. Write the expression for the probability of observing zero defects and calculate it approximately.",
+            "expected_answer": "For a Poisson random variable X, Pr(X=0) = exp(-λ) λ⁰/0! = exp(-0.046). This is approximately 0.955, so there is about a 95.5% probability of observing zero defects for an inspected unit under this model."
+        },
+        {
+            "question_id": "4.18",
+            "question": "For a normally distributed measurement X, explain the difference between the probability density function and cumulative distribution function. How would you calculate Pr(a < X < b) using cumulative probabilities?",
+            "expected_answer": "The probability density function describes the relative density of probability around values of the continuous variable, while the cumulative distribution function Φ(x) gives Pr(X ≤ x). An interval probability is obtained by subtraction: Pr(a < X < b) = Φ(b) - Φ(a)."
+        },
+        {
+            "question_id": "4.19",
+            "question": "A metal-bar dimension is normally distributed with μ = 20.00 mm and σ = 0.10 mm. Calculate the Z-score for x = 20.25 mm and interpret it.",
+            "expected_answer": "Z = (x - μ)/σ = (20.25 - 20.00)/0.10 = 2.5. The value 20.25 mm is 2.5 standard deviations above the process mean. The Z-score can then be used with the standard normal cumulative distribution to estimate the fraction beyond that value."
+        },
+        {
+            "question_id": "4.20",
+            "question": "Match the statistic with the sampling distribution highlighted in the lecture: sample mean when σ is unknown, sample variance, and ratio of two sample variances.",
+            "expected_answer": "Sample mean when σ is unknown: t distribution. Sample variance: chi-squared distribution. Ratio of two sample variances: F distribution."
+        },
+        {
+            "question_id": "4.21",
+            "question": "State the two main effects of the Central Limit Theorem discussed in the lecture for sample means as sample size increases.",
+            "expected_answer": "First, the distribution of sample means tends toward a normal distribution as sample size increases, even when individual observations are not normally distributed. Second, the sample-mean distribution is centred at approximately the population mean but is narrower than the distribution of individual observations, with spread governed by the standard error."
+        },
+        {
+            "question_id": "4.22",
+            "question": "A process has population standard deviation σ = 12. Calculate the standard error of the mean for sample sizes n = 9 and n = 36. Explain the effect of increasing sample size.",
+            "expected_answer": "The standard error is σ/√n. For n = 9, SE = 12/3 = 4. For n = 36, SE = 12/6 = 2. Increasing the sample size from 9 to 36 reduces the standard error by half, so the sample mean is expected to vary less from sample to sample."
+        },
+        {
+            "question_id": "4.23",
+            "question": "Explain what a 95% confidence interval for a population parameter is intended to represent. Avoid interpreting it as a guarantee about one specific interval.",
+            "expected_answer": "A 95% confidence procedure is constructed so that, over repeated random samples analysed in the same way, approximately 95% of the resulting intervals would contain the true population parameter. A specific computed interval is therefore an interval estimate produced by a method with 95% long-run coverage, not a guarantee that the parameter randomly moves in or out of that fixed interval."
+        },
+        {
+            "question_id": "4.24",
+            "question": "When constructing a confidence interval for a population mean, when should a Z-based interval be used and when should a t-based interval be used according to the lecture?",
+            "expected_answer": "Use a Z-based interval when the population standard deviation σ is known. Use a t-based interval when σ is unknown and is estimated with the sample standard deviation s. In either case the interval is centred on the sample mean, and its half-width is a critical-distribution value multiplied by the standard error."
+        },
+        {
+            "question_id": "4.25",
+            "question": "Two processes have a 95% confidence interval for the ratio of their standard deviations (or equivalently an interval assessing their relative variability) that includes the reference value 1.0. What conclusion does the lecture's variance-ratio example support?",
+            "expected_answer": "Because the reference ratio 1.0 lies within the 95% confidence interval, the data do not provide evidence at that confidence level that the population variabilities differ. The lecture's example therefore concludes that the variance has not been shown to have changed."
+        }
+    ],
+    "vector_store_id": "",
+    "index": {
+        "$numberInt": "3"
+    }
+}

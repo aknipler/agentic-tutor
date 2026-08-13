@@ -9,7 +9,14 @@ from openai import OpenAI
 from openai.types.vector_store import VectorStore
 import tempfile
 from mongodb.connectors import get_modules_data, get_mongo_client
+from mongodb.connectors.analytics import (
+    get_tutor_message_counts,
+    get_assessor_submission_counts,
+    get_module_completion_counts,
+    clear_analytics_caches
+)
 from mongodb.connectors.user_progress import create_user_progress, list_users, delete_user, get_user_progress_details
+from utils.modules import find_module_by_index, module_index, sort_modules_by_index
 
 
 # Set page config
@@ -93,6 +100,159 @@ def view_user_progress():
     except Exception as e:
         st.error(f"Error fetching user data: {str(e)}")
 
+def render_completion_histogram(counts: List[int], maximum: int, x_title: str):
+    """Draw how many students sit at each completion count.
+
+    Every count from 0 up to `maximum` gets a bar, including the ones no student
+    reached - a gap at "3 topics" is information, and a bare value_counts would
+    silently drop it. The counts are discrete, so the x axis is ordinal rather
+    than a continuous histogram: there is no such thing as 2.5 topics completed.
+
+    Drawn from a hand-written Vega-Lite spec rather than with `st.bar_chart` or
+    Altair, both of which import `altair` at runtime. Altair 5.5 cannot be
+    imported on this project's Python (3.14): its generated schema module passes
+    `closed=True` to the stdlib `TypedDict`, which only typing_extensions
+    accepts. `st.vega_lite_chart` touches altair only under TYPE_CHECKING, so it
+    works today and keeps working whichever way that pin is resolved.
+
+    Args:
+        counts: one completion count per student.
+        maximum: how many there are to complete. Widened if a student somehow
+            has more (renaming a topic orphans progress under the old name), so
+            that nobody is dropped off the end of the axis.
+        x_title: axis label, also the column name the spec encodes.
+    """
+    upper = max(maximum, max(counts, default=0))
+    tally = (
+        pd.Series(counts, dtype="int64")
+        .value_counts()
+        .reindex(range(upper + 1), fill_value=0)
+        .sort_index()
+    )
+    data = pd.DataFrame({x_title: tally.index, "Students": tally.values})
+
+    st.vega_lite_chart(
+        data,
+        {
+            "mark": {"type": "bar", "tooltip": True},
+            "encoding": {
+                "x": {"field": x_title, "type": "ordinal", "title": x_title},
+                "y": {
+                    "field": "Students",
+                    "type": "quantitative",
+                    "title": "Number of students",
+                    "axis": {"tickMinStep": 1}
+                }
+            }
+        }
+    )
+
+
+def render_data_analysis():
+    """Cohort-level engagement and progress, across every student at once."""
+    st.header("Data Analysis")
+
+    if st.button("Refresh data", key="analytics_refresh", help="Counts are cached for 5 minutes."):
+        clear_analytics_caches()
+        st.rerun()
+
+    tutor_counts = get_tutor_message_counts()
+    assessor_counts = get_assessor_submission_counts()
+
+    # "Used their account" means the student said something to one of the two
+    # agents. Logging in on its own leaves no trace, so it can't be counted.
+    active_users = set(tutor_counts) | set(assessor_counts)
+    tutor_total = sum(tutor_counts.values())
+    assessor_total = sum(assessor_counts.values())
+
+    # Conversation logs outlive progress records: deleting a user clears their
+    # progress but not their transcripts, so some active accounts are no longer
+    # in the cohort. They still count as used, but say so rather than letting
+    # the number quietly exceed the number of students.
+    known_users = {user["user_id"] for user in list_users()}
+    total_users = len(known_users)
+    untracked_users = active_users - known_users
+
+    metric_col1, metric_col2 = st.columns(2)
+    with metric_col1:
+        st.metric("Students who have used their account", len(active_users))
+        st.caption(f"out of {total_users} students with a progress record")
+        if untracked_users:
+            st.caption(
+                f"Includes {len(untracked_users)} with no progress record left "
+                f"({', '.join(sorted(untracked_users))}) - deleted or test accounts. "
+                "They are excluded from the charts below."
+            )
+    with metric_col2:
+        st.metric("Questions asked", tutor_total + assessor_total)
+        st.caption(
+            f"{tutor_total} messages to the tutor + {assessor_total} answers submitted "
+            "to the assessor. Assessor submissions count every attempt, so a question "
+            "answered twice counts twice."
+        )
+
+    st.divider()
+
+    modules = sort_modules_by_index(get_modules_data())
+    if not modules:
+        st.info("No modules in the database yet, so there is no progress to chart.")
+        return
+
+    # Keyed by `index`, never by title: progress records are stored under it, so
+    # a module without one has nothing to line up against.
+    module_titles = {
+        module_index(module): module.get("title", "Untitled")
+        for module in modules
+        if module_index(module) is not None
+    }
+    if not module_titles:
+        st.warning("No module has an `index`, so progress can't be attributed to one.")
+        return
+
+    selected_index = st.selectbox(
+        "Module",
+        list(module_titles),
+        format_func=lambda index: f"Module {index} - {module_titles[index]}",
+        key="analytics_module"
+    )
+
+    module = find_module_by_index(modules, selected_index)
+    topics = module.get("topics", []) or []
+    # tutorial_questions is a list in the loaded data but tolerated as a dict
+    # elsewhere; len() is the same answer either way.
+    questions = module.get("tutorial_questions", []) or []
+
+    rows = get_module_completion_counts(str(selected_index))
+    active_only = st.checkbox(
+        "Only students who have used their account",
+        value=True,
+        key="analytics_active_only",
+        help="Unused login codes - including the spare ones - otherwise pile up at zero."
+    )
+    if active_only:
+        rows = [row for row in rows if row["user_id"] in active_users]
+
+    if not rows:
+        st.info("No students to chart yet.")
+        return
+
+    st.caption(f"{len(rows)} students - {len(topics)} topics, {len(questions)} tutorial questions in this module")
+
+    chart_col1, chart_col2 = st.columns(2)
+    with chart_col1:
+        st.subheader("Tutor")
+        render_completion_histogram(
+            [row["topics_completed"] for row in rows], len(topics), "Topics completed"
+        )
+        st.caption("Topics the tutor has marked at competency level 2.")
+    with chart_col2:
+        st.subheader("Assessor")
+        render_completion_histogram(
+            [row["questions_completed"] for row in rows], len(questions), "Questions completed"
+        )
+        st.caption("Tutorial questions graded at competency level 2.")
+
+
 def update_module_vector_store(module_title: str, vector_store_id: str) -> bool:
     """Update a module's vector store ID in MongoDB."""
     try:
@@ -145,17 +305,29 @@ def main():
         st.info("Database maintenance features have been moved to a separate admin tool.")
 
     # Create tabs for different sections
-    tab1, tab2, tab3, tab4 = st.tabs(["Vector Store Management", "Module-Vector Store Management", "Assistant Management", "User Management"])
-    
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Vector Store Management", "Module-Vector Store Management", "Assistant Management", "User Management", "Data Analysis"])
+
+    # Filled first, though it is the last tab on screen: the Module-Vector Store
+    # tab returns out of main() when there are no modules or no vector stores,
+    # which would otherwise leave every tab after it blank.
+    with tab5:
+        render_data_analysis()
+
     with tab1:
         st.header("Vector Store Management")
         
         # Vector store listing section
         st.subheader("Existing Vector Stores")
+        # Bound before the try, because the file-upload section further down
+        # reads it: when the list call failed, it was left undefined there and
+        # the resulting UnboundLocalError escaped main(), replacing the whole
+        # dashboard with a traceback and blanking every other tab. An OpenAI
+        # outage or a bad key should cost this section, not the whole page.
+        vector_store_list = []
         try:
-            vector_stores = client.vector_stores.list()
-            if vector_stores.data:
-                stores = [get_vector_store_info(store) for store in vector_stores.data]
+            vector_store_list = client.vector_stores.list().data or []
+            if vector_store_list:
+                stores = [get_vector_store_info(store) for store in vector_store_list]
                 df = pd.DataFrame(stores)
                 st.dataframe(df)
                 
@@ -192,11 +364,11 @@ def main():
 
         # File upload section
         st.subheader("Add Files to Vector Store")
-        if vector_stores.data:
+        if vector_store_list:
             selected_store = st.selectbox(
                 "Select vector store to add files to",
-                [store.id for store in vector_stores.data],
-                format_func=lambda x: next((store.name for store in vector_stores.data if store.id == x), x)
+                [store.id for store in vector_store_list],
+                format_func=lambda x: next((store.name for store in vector_store_list if store.id == x), x)
             )
             
             uploaded_files = st.file_uploader(

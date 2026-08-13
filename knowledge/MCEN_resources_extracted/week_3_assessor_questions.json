@@ -115,7 +115,7 @@
             "expected_answer": "Use 10 representative parts covering the expected process range, including parts near both specification limits where safely available. Use 3 operators who normally perform the measurement. Each operator measures every part 3 times, giving 10×3×3=90 measurements. Runs should be randomised so operators do not measure parts in a predictable sequence, and operators should be blinded to previous readings. Use the normal instrument, fixture, method, and environmental conditions, while recording operator, part, repeat, and measurement. The design estimates part-to-part variation, repeatability, reproducibility, and part×operator interaction."
         }
     ],
-    "vector_store_id": "vs_week3_anova_gage_rr",
+    "vector_store_id": "vs_6a6212840208819180fb7a75ba0c766d",
     "index": {
         "$numberInt": "2"
     }

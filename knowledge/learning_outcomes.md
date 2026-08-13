@@ -166,3 +166,299 @@
    - Explain that P/TV addresses suitability for inspection relative to tolerance.
    - Explain that %R&R addresses suitability for detecting process shifts relative to process variation.
    - Interpret Gauge R&R tables and plots.
+
+### Lecture 4: Probability, Statistics and Confidence Intervals
+
+1. **Probability and Manufacturing Uncertainty**
+   - Define probability as a quantitative measure of uncertainty about whether an event occurs, taking values between 0 and 1.
+   - Interpret probability statements in manufacturing and quality contexts, such as the probability that a produced unit is within specification.
+   - Relate probability to defect rates and yield.
+
+2. **Random Experiments, Outcomes, Events and Sample Spaces**
+   - Distinguish a random experiment, a trial or run, an outcome, an event, and the sample space.
+   - Explain an outcome as an element of the sample space and an event as a set of outcomes.
+   - Distinguish binary, countable discrete, and continuous sample spaces according to the characteristic measured.
+   - Distinguish the population or universe from the sample space of a single trial.
+
+3. **Combining Events**
+   - Interpret intersection, union, difference, and complement as operations on events.
+   - Distinguish the certain event from the empty or impossible event.
+   - Translate between event notation and plain-language statements such as 'A and B', 'A or B', and 'A does not occur'.
+
+4. **Probability Axioms**
+   - State that the sample space has probability 1.
+   - State that every event probability lies between 0 and 1.
+   - Add the probabilities of mutually exclusive events when they are combined by union.
+   - Recognise when events are not mutually exclusive and the addition rule does not apply directly.
+
+5. **Independent Events**
+   - Define independence by Pr(A and B) = Pr(A) x Pr(B).
+   - Distinguish independent from dependent events.
+   - Identify situations in which one trial does or does not influence a subsequent trial.
+
+6. **Population, Sample, Parameters and Statistics**
+   - Distinguish a population from a sample.
+   - Distinguish a population parameter from a sample statistic.
+   - Identify the population mean and population standard deviation as parameters describing the population.
+   - Identify the sample mean and sample standard deviation as statistics calculated from sampled data and used to estimate population parameters.
+
+7. **Numerical Data Types**
+   - Distinguish attribute or discrete data from continuous data.
+   - Classify pass/fail observations as binary attribute data.
+   - Classify defect counts as integer count data.
+   - Classify measured quantities with units as continuous data.
+   - Explain why continuous measurements generally retain more information than attribute data.
+
+8. **Graphical Analysis of Data**
+   - Interpret run charts to reveal trends over time.
+   - Interpret scatter plots to show patterns of association.
+   - Interpret boxplots to summarise location and spread and to identify extreme values.
+   - Interpret histograms for frequency, centring, spread, and shape.
+   - Compare a histogram with specification limits.
+
+9. **Measures of Central Tendency**
+   - Calculate and interpret the sample mean, median, and mode.
+   - Explain that the mean uses all values and can be strongly influenced by outliers.
+   - Explain that the median is less sensitive to extreme values.
+   - Identify the mode as the most frequently occurring value.
+
+10. **Measures of Variability**
+   - Calculate and interpret the range, sample variance, and sample standard deviation.
+   - Explain that the range uses only the minimum and maximum values.
+   - Explain variance as based on squared deviations from the mean.
+   - Explain standard deviation as the square root of variance, expressed in the original measurement units.
+
+11. **Variance Addition**
+   - Explain that variances, rather than standard deviations, add when independent sources of variability combine.
+   - Relate output variance to contributing input variances.
+   - Obtain the output standard deviation by taking the square root of the total variance.
+
+12. **Quartiles and Percentiles**
+   - Interpret quartiles and percentiles as values dividing ordered data into specified lower and upper proportions.
+   - Use the interquartile range and percentile ranges to describe spread.
+   - Connect quartiles with the information shown on a boxplot.
+
+13. **Outliers**
+   - Recognise outliers as observations outside the expected pattern of a dataset.
+   - Explain why outliers require investigation for special causes rather than automatic deletion.
+   - Distinguish the base distribution from a separately reported outlier occurrence when a justified special cause is identified.
+
+14. **Normality Assessment**
+   - Explain the purpose of normal probability plots and the Anderson-Darling normality test.
+   - Interpret an approximately straight normal probability plot as evidence consistent with normality.
+   - Interpret a normality-test p-value in terms of whether there is sufficient evidence to reject a normal model.
+
+15. **Distribution Selection for Manufacturing Data**
+   - Associate the binomial distribution with counts of defectives from pass/fail trials.
+   - Associate the Poisson distribution with counts of defects.
+   - Associate the normal distribution with many continuous measured values arising from measurement- and control-limited processes.
+   - Recognise that lognormal, exponential, Weibull, t, chi-squared, and F distributions have other applications.
+
+16. **Binomial Distribution**
+   - State the conditions for a binomial model: a fixed number of comparable trials, two outcomes per trial, a constant probability of the outcome of interest, and independent trials.
+   - Calculate or interpret probabilities for a specified number of defectives in a sample.
+   - Recognise situations in which the binomial conditions are not satisfied.
+
+17. **Poisson Distribution**
+   - Explain the Poisson distribution as a model for defect counts or event counts characterised by a mean rate.
+   - Calculate or interpret the probability of observing a specified number of defects.
+   - Identify situations in which a Poisson model is appropriate.
+
+18. **Normal Distribution and Probability Functions**
+   - Describe the normal distribution as a continuous distribution defined by its mean and standard deviation.
+   - Distinguish probability density from cumulative probability.
+   - Determine probabilities over intervals using cumulative distribution values.
+
+19. **Standard Normal Distribution and Z-Score**
+   - Standardise a normal random variable by subtracting the mean and dividing by the standard deviation.
+   - Interpret the Z-score as the number of standard deviations a value lies from the mean.
+   - Use Z-scores and cumulative normal probabilities to estimate proportions above, below, or between specified limits.
+   - Relate those proportions to conformance and defect rates.
+
+20. **Sampling Distributions**
+   - Recognise that statistics themselves have sampling distributions.
+   - Associate the t distribution with inference on sample means when the population standard deviation is not known.
+   - Associate the chi-squared distribution with sample variance.
+   - Associate the F distribution with ratios of sample variances.
+
+21. **Central Limit Theorem**
+   - Explain that sums and averages of independent random variables tend toward a normal distribution as sample size increases.
+   - Recognise that this holds even when the underlying individual-variable distribution is not normal.
+   - Explain why the Central Limit Theorem enables inference from samples about population characteristics.
+
+22. **Standard Error of the Mean**
+   - Explain that the distribution of sample means is centred approximately on the population mean.
+   - Explain why the spread of sample means is smaller than the spread of the individual population.
+   - Calculate and interpret the standard error of the mean as the standard deviation divided by the square root of the sample size.
+   - Explain how increasing sample size reduces standard error.
+
+23. **Confidence Interval Concept**
+   - Explain a confidence interval as an interval estimate for an unknown population parameter derived from sampling uncertainty.
+   - Interpret a stated confidence level in repeated-sampling terms.
+   - Recognise that confidence intervals become more informative as sampling uncertainty is reduced.
+
+24. **Confidence Interval for a Mean**
+   - Select a Z-based interval when the population standard deviation is known.
+   - Select a t-based interval when the population standard deviation is unknown and is estimated using the sample standard deviation.
+   - Explain the role of sample size and standard error in the interval width.
+   - Interpret a confidence interval for a mean in an engineering context.
+
+25. **Confidence Intervals for Variability, Rates and Proportions**
+   - Associate chi-squared methods with a single variance or standard deviation.
+   - Associate F methods with a ratio of two variances.
+   - Associate Poisson-based methods with rates and binomial-based methods with proportions.
+   - Interpret whether a reference value such as a variance ratio of 1 lies within a confidence interval.
+   - Explain what that implies about the evidence for a difference.
+
+### Lecture 5: Hypothesis Testing
+
+1. **Hypothesis Test Usage**
+   - Select hypothesis testing when comparing a population mean, variance, proportion, or rate with a target.
+   - Select hypothesis testing when comparing two populations.
+   - Identify applications including root-cause analysis, lot inspection, and supplier certification.
+
+2. **Hypotheses and Population Parameters**
+   - Explain a hypothesis as a claim about one or more population parameters.
+   - Distinguish population parameters from the sample statistics used to test the claim.
+
+3. **Null and Alternative Hypotheses**
+   - Formulate the null hypothesis as the no-difference or equality claim.
+   - Formulate the alternative hypothesis as the relevant one-sided or two-sided claim.
+   - Match the pair of hypotheses to the engineering question being asked.
+
+4. **Type I and Type II Errors**
+   - Distinguish correct acceptance, correct rejection, Type I error, and Type II error.
+   - Relate Type I error to alpha risk and confidence.
+   - Relate Type II error to beta risk and power.
+
+5. **Engineering Interpretation of Test Errors**
+   - Interpret a Type I error as rejecting good product.
+   - Interpret a Type II error as accepting bad product.
+   - Explain the consequences of each error in an inspection or supplier decision context.
+
+6. **Hypothesis Testing Procedure**
+   - Apply the ten-step inferencing procedure from practical problem definition through to practical conclusion.
+   - State the assumptions required by the chosen test.
+   - Select and calculate an appropriate test statistic.
+   - Reach a statistical decision from the p-value and translate it into a practical conclusion.
+
+7. **P-Value and Statistical Decision**
+   - Interpret the p-value within the course framework.
+   - Apply the rule that a p-value below alpha leads to rejection of the null hypothesis.
+   - Explain that failing to reject the null hypothesis is not proof that it is true.
+
+8. **T-Tests**
+   - Choose a one-sample t-test to compare a mean with a target.
+   - Choose a two-sample t-test to compare the means of two independent populations.
+   - Choose a paired t-test when observations are naturally paired.
+   - Recognise that t-tests apply when the population standard deviation is unknown.
+
+9. **One-Sided and Two-Sided Tests**
+   - Choose a directional one-sided alternative when only one direction of difference matters.
+   - Choose a two-sided alternative when any difference matters.
+   - Match the choice to the engineering question rather than to the observed data.
+
+10. **Parametric Tests for Means and Variances**
+   - Distinguish one-sample, two-sample, and paired t-tests by purpose and data structure.
+   - Distinguish one-sample variance tests from two-sample F-tests.
+   - Select the appropriate parametric test for a stated comparison.
+
+11. **Proportion and Rate Tests**
+   - Use one- and two-sample proportion tests for defect fractions.
+   - Use one- and two-sample rate tests for defect occurrence rates.
+   - Distinguish proportion data from rate data.
+
+12. **Sample Size and Critical Difference**
+   - Explain how alpha and beta risks influence the required sample size.
+   - Explain how process variation and the critical difference to detect influence the required sample size.
+   - Relate sample size to test sensitivity.
+
+13. **Sample Size for Variance, Rate and Proportion Tests**
+   - Recognise that variance, rate, and proportion studies require stated risk levels.
+   - Recognise that they also require a practically meaningful ratio or difference to define sample size.
+
+14. **Non-Parametric Statistics**
+   - Explain when non-parametric methods are appropriate.
+   - Recognise that suitable parametric tests are generally preferred when their assumptions are satisfied.
+   - Identify the assumptions whose failure motivates a non-parametric approach.
+
+15. **Runs Test and Independence**
+   - Explain the purpose of a runs test.
+   - Use a runs test conceptually to assess whether observations are mutually independent.
+   - Explain why independence should be checked before applying non-parametric methods.
+
+16. **Sign, Wilcoxon, Mann-Whitney and Kruskal-Wallis Tests**
+   - Match the sign test to paired-direction questions.
+   - Match the Wilcoxon test to paired-rank questions.
+   - Match the Mann-Whitney test to two independent populations.
+   - Match the Kruskal-Wallis test to multiple independent populations.
+
+### Lecture 6: Quality Requirements and Six Sigma
+
+1. **Building Organizational Memory**
+   - Explain the Eyelash Learning Curve.
+   - Explain how documented standard operating procedures preserve organisational learning.
+   - Explain the role of training in retaining process knowledge.
+
+2. **Standard Procedures: Benefits, Risks and Balance**
+   - Evaluate the advantages of standard work.
+   - Evaluate the disadvantages and risks of standard work.
+   - Treat standards as living methods that are improved scientifically rather than changed arbitrarily.
+
+3. **PDCA Continuous Improvement**
+   - Apply Plan-Do-Check-Act as a repeating framework for process improvement.
+   - Relate PDCA to the scientific method.
+   - Explain investigating, testing, verifying, and standardising a process improvement.
+
+4. **Organizational Quality Management**
+   - Explain quality management as documented goals supported by processes.
+   - Relate documented quality goals to standard work instructions.
+
+5. **ISO 9000 and ISO 9001**
+   - Recognise the ISO 9000 family and the role of ISO 9001 within it.
+   - Identify the quality management principles: customer focus, leadership, engagement of people, process approach, improvement, evidence-based decision making, and relationship management.
+
+6. **Quality Management System Documentation**
+   - Distinguish the quality manual, process documents, and detailed standard work instructions.
+   - Explain how these layers link together into a single quality management system.
+
+7. **Quality Policy**
+   - Explain the quality policy as executive management's written quality directive.
+   - Explain its role in stating the rationale for the organisation's quality effort.
+
+8. **Six Sigma Mindset and DMAIC**
+   - Explain Six Sigma as a process-improvement mindset focused on managing inputs to improve outputs.
+   - Identify the five DMAIC phases: Define, Measure, Analyse, Improve, and Control.
+
+9. **DMAIC - Define**
+   - Associate process maps with defining the process.
+   - Associate FMEA with identifying important failure modes.
+   - Explain the purpose of defining the problem before measuring it.
+
+10. **DMAIC - Measure**
+   - Associate cause-and-effect diagrams with identifying potential sources of variation.
+   - Associate descriptive statistics with characterising the problem.
+   - Associate Gauge R&R with confirming that the measurement system is adequate.
+
+11. **DMAIC - Analyse**
+   - Associate matrix plots with identifying relationships between variables.
+   - Associate process capability studies with assessing current process performance.
+
+12. **DMAIC - Improve**
+   - Associate ANOVA and regression with identifying influential factors.
+   - Associate design of experiments with testing changes that improve outputs.
+
+13. **DMAIC - Control**
+   - Associate control plans with maintaining the gains achieved.
+   - Associate statistical process control charts with detecting out-of-control conditions.
+   - Explain the need to react to out-of-control conditions.
+
+14. **Rolled Throughput Yield**
+   - Calculate rolled throughput yield as the product of yields through sequential process steps.
+   - Explain why a final yield figure can hide scrap and rework at intermediate steps.
+   - Explain the hidden factory.
+
+15. **Cost of Poor Quality**
+   - Identify the visible costs of defects, rework, and disposal.
+   - Identify hidden costs including delays, additional labour, and lost efficiency.
+   - Identify lost customer expectations, lost profits, and lost market share as consequences of poor quality.

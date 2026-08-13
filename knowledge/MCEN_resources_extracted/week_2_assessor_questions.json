@@ -85,7 +85,7 @@
             "expected_answer": "Failure mode: air trapped in the mould. Effect: internal porosity or voids, reduced structural strength, leakage, poor surface quality, or machining exposure of cavities. Likely causes: inadequate venting, excessive fill rate or turbulence, poor gating, moisture, or incorrect pressure profile. Existing controls: vent inspection and cleaning, controlled fill-pressure recipe, melt degassing, process parameter monitoring, and non-destructive inspection or proof testing. Recommended action: redesign or maintain vents and optimise the fill-pressure profile using trials, with a verified control limit for fill rate or pressure. Severity, occurrence, and detection ratings should then be assigned consistently with the organisation's FMEA scale."
         }
     ],
-    "vector_store_id": "vs_week2_inspections_processes",
+    "vector_store_id": "vs_6a62126cd6dc819181a416caa04b1e53",
     "index": {
         "$numberInt": "1"
     }

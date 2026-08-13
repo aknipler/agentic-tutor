@@ -1,0 +1,138 @@
+{
+    "_id": {
+        "$oid": "68abc1040000000000000004"
+    },
+    "title": "Week 5 - Hypothesis Testing",
+    "topics": [
+        {
+            "name": "Hypothesis Test Usage",
+            "description": "Select hypothesis testing when comparing a population mean, variance, proportion or rate with a target, or when comparing two populations, including applications such as root-cause analysis, lot inspection and supplier certification."
+        },
+        {
+            "name": "Hypotheses and Population Parameters",
+            "description": "Explain a hypothesis as a claim about one or more population parameters and distinguish population parameters from sample statistics used to test the claim."
+        },
+        {
+            "name": "Null and Alternative Hypotheses",
+            "description": "Formulate H0 as the no-difference or equality claim and HA as the relevant one-sided or two-sided alternative."
+        },
+        {
+            "name": "Type I and Type II Errors",
+            "description": "Distinguish correct acceptance, correct rejection, Type I error and Type II error, and relate them to alpha risk, beta risk, confidence and power."
+        },
+        {
+            "name": "Engineering Interpretation of Test Errors",
+            "description": "Interpret Type I error as rejecting good product and Type II error as accepting bad product in an inspection or supplier decision context."
+        },
+        {
+            "name": "Hypothesis Testing Procedure",
+            "description": "Apply the lecture's ten-step inferencing procedure from practical problem definition through assumptions, test statistic, p-value decision and practical conclusion."
+        },
+        {
+            "name": "P-Value and Statistical Decision",
+            "description": "Interpret the p-value in the course framework and use the rule p < alpha to reject H0."
+        },
+        {
+            "name": "T-Tests",
+            "description": "Choose among one-sample, two-sample and paired t-tests for means when the population standard deviation is unknown."
+        },
+        {
+            "name": "One-Sided and Two-Sided Tests",
+            "description": "Choose a directional one-sided alternative or a two-sided difference alternative to match the engineering question."
+        },
+        {
+            "name": "Parametric Tests for Means and Variances",
+            "description": "Distinguish one-sample t-tests, two-sample t-tests, paired t-tests, one-sample variance tests and two-sample F-tests by purpose and data structure."
+        },
+        {
+            "name": "Proportion and Rate Tests",
+            "description": "Use one- and two-sample proportion or rate tests for defect fractions and defect occurrence rates."
+        },
+        {
+            "name": "Sample Size and Critical Difference",
+            "description": "Explain how alpha, beta, process variation and the critical difference to detect determine sample size and test sensitivity."
+        },
+        {
+            "name": "Sample Size for Variance, Rate and Proportion Tests",
+            "description": "Recognise that variance, rate and proportion studies require risk levels plus practically meaningful ratios or differences to define sample size."
+        },
+        {
+            "name": "Non-Parametric Statistics",
+            "description": "Explain when non-parametric methods are appropriate, while recognising that suitable parametric tests are generally preferred when their assumptions are satisfied."
+        },
+        {
+            "name": "Runs Test and Independence",
+            "description": "Use a runs test conceptually to assess whether observations are mutually independent before applying non-parametric methods."
+        },
+        {
+            "name": "Sign, Wilcoxon, Mann-Whitney and Kruskal-Wallis Tests",
+            "description": "Match common non-parametric tests to paired-direction, paired-rank, two-independent-population and multiple-independent-population questions."
+        }
+    ],
+    "tutorial_questions": [
+        {
+            "question_id": "4.1",
+            "question": "A supplier claims that the mean efficiency of a lamp population is 86.5%. You take a random sample and want to test whether the true mean is lower than 86.5%. State the practical question, the null hypothesis and the alternative hypothesis.",
+            "expected_answer": "Practical question: is the supplier's population mean efficiency below the 86.5% requirement? Use a one-sample mean hypothesis test. H0: μ = 86.5%. HA: μ < 86.5%. The null is written as the equality/no-difference claim, while the alternative expresses the directional concern."
+        },
+        {
+            "question_id": "4.2",
+            "question": "Explain the four possible outcomes of a hypothesis test in terms of the test decision and the true state of H0. Identify which outcomes are Type I and Type II errors.",
+            "expected_answer": "If H0 is true and the decision is to accept or not reject H0, the decision is correct. If H0 is true and it is rejected, this is a Type I error controlled by alpha. If H0 is false and it is accepted or not rejected, this is a Type II error controlled by beta. If H0 is false and it is rejected, the decision is correct. Confidence is 1−alpha and power is 1−beta."
+        },
+        {
+            "question_id": "4.3",
+            "question": "In a final inspection context, explain the engineering consequence of a Type I error and a Type II error.",
+            "expected_answer": "A Type I error corresponds to rejecting H0 when it is actually true; in the course's quality interpretation this can mean rejecting or scrapping good product, creating unnecessary cost. A Type II error corresponds to not rejecting H0 when it is false; this can mean accepting bad product into the final product or allowing it to reach the customer. The acceptable alpha and beta risks should reflect the severity and occurrence consequences."
+        },
+        {
+            "question_id": "4.4",
+            "question": "List the ten general steps of hypothesis testing used in the lecture, from defining the practical problem to the final engineering conclusion.",
+            "expected_answer": "1. State the practical problem. 2. State the statistical test and H0/HA. 3. Define alpha and beta risks. 4. Determine sample size. 5. Randomly sample and measure. 6. Check the assumptions of the test, such as normality and equal variance where required. 7. Calculate the model result and test statistic. 8. Assess adequacy of the model result. 9. Determine the p-value and make the statistical decision; if p < alpha, reject H0. 10. Translate the statistical conclusion into practical engineering terms."
+        },
+        {
+            "question_id": "4.5",
+            "question": "A test is performed with α = 0.05 and the calculated p-value is 0.018. What is the statistical decision? What if p = 0.21?",
+            "expected_answer": "For p = 0.018, p < 0.05, so reject H0. For p = 0.21, p is not less than alpha, so there is insufficient evidence to reject H0. The result should then be translated back into the practical question; a non-rejection does not demonstrate a practically important difference."
+        },
+        {
+            "question_id": "4.6",
+            "question": "Choose the appropriate t-test for each case: (a) compare the mean shaft diameter with a target; (b) compare means from two independently sampled suppliers; (c) compare measurements on the same ten parts before and after a process change.",
+            "expected_answer": "(a) One-sample t-test for a mean versus a target. (b) Two-sample t-test for two independent population means. (c) Paired t-test because each after-measurement has a dependent correspondence with the before-measurement on the same part. These t-tests are used when the relevant population standard deviation is unknown."
+        },
+        {
+            "question_id": "4.7",
+            "question": "A process engineer asks: 'Has the new setting increased average strength?' Should the alternative hypothesis be one-sided or two-sided? State an appropriate HA. How would this differ from the question 'Has the setting changed average strength?'.",
+            "expected_answer": "'Increased' is directional, so use a one-sided alternative such as HA: μnew > μold. 'Changed' allows either an increase or decrease, so use a two-sided alternative such as HA: μnew ≠ μold."
+        },
+        {
+            "question_id": "4.8",
+            "question": "A motor design change may affect both the mean axial play and its variability. Identify a suitable parametric test for comparing (a) the two independent population means and (b) the two independent population variances.",
+            "expected_answer": "For two independent means, use a two-sample t-test. For two independent variances, use a two-sample F-test (with other variance tests such as Bartlett or Levene also appearing in the lecture summary). The test selected must match the parameter being compared."
+        },
+        {
+            "question_id": "4.9",
+            "question": "A production process has a maximum allowable defective proportion of 0.5%. Which broad type of hypothesis test is appropriate for testing one production population against this requirement? How would the test change if comparing the defective proportions of two suppliers?",
+            "expected_answer": "Use a one-sample proportion test to compare the population defective proportion with the 0.5% target. To compare defective proportions between two suppliers, use a two-sample proportion test."
+        },
+        {
+            "question_id": "4.10",
+            "question": "Explain why sample size affects the resolution or sensitivity of a hypothesis test. Include the roles of α, β, the process standard deviation σ, and the critical difference Δ that the experiment must detect.",
+            "expected_answer": "Sample size determines how small a practical difference can be detected at the chosen risks. The experimenter selects alpha and beta, specifies the critical difference Δ worth detecting, and estimates process variation σ. A smaller Δ, lower allowable risks, or larger σ generally requires a larger sample. The ratio Δ/σ is an effect size: a larger effect is easier to detect; a smaller effect requires more data."
+        },
+        {
+            "question_id": "4.11",
+            "question": "A data set is strongly non-normal and a suitable transformation or parametric model is not available. What is meant by a non-parametric test, and what independence check should be considered first according to the competency list?",
+            "expected_answer": "A non-parametric method does not rely on estimating population parameters such as a mean and variance under a specified population distribution. It can be used when parametric assumptions are unsuitable, although a valid parametric test is preferred when applicable because it is generally more efficient. A runs test can be used to assess whether sample observations are mutually independent; if independence fails, the listed non-parametric tests are not valid simply by virtue of being non-parametric."
+        },
+        {
+            "question_id": "4.12",
+            "question": "Match each scenario to one of the following non-parametric tests: sign test, Wilcoxon signed-rank test, Mann-Whitney test, Kruskal-Wallis test. (a) paired before/after observations where only direction of change is used; (b) paired before/after observations using direction and magnitude; (c) compare central tendency of two independent populations; (d) compare central tendency across more than two independent populations.",
+            "expected_answer": "(a) Sign test. (b) Wilcoxon signed-rank test. (c) Mann-Whitney test, under the course-stated requirements that the populations have the same shape and equal variances. (d) Kruskal-Wallis test for independent populations with a common central-tendency question."
+        }
+    ],
+    "vector_store_id": "",
+    "index": {
+        "$numberInt": "4"
+    }
+}
