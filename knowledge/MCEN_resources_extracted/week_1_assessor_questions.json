@@ -111,7 +111,7 @@
             "expected_answer": "Cpk=1.67 indicates good short-term conformance only if the process is stable and the mean and standard deviation estimates are representative. Long-term performance may be worse because the mean or spread can change through tool wear, process drift, environmental changes, material-lot variation, ageing equipment, maintenance differences, or systematic trends. Long-term evidence therefore requires ongoing process monitoring, suitable control charts, and data covering the relevant operating conditions and time period."
         }
     ],
-    "vector_store_id": "vs_week1_probability_reliability_quality",
+    "vector_store_id": "vs_6a620ffcbf088191b75bb803ac9e0843",
     "index": {
         "$numberInt": "0"
     }

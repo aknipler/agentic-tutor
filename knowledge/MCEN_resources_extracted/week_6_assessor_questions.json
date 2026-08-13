@@ -1,0 +1,139 @@
+{
+    "_id": {
+        "$oid": "68abc1050000000000000005"
+    },
+    "title": "Week 6 - Quality Requirements and Six Sigma",
+    "topics": [
+        {
+            "name": "Building Organizational Memory",
+            "description": "Explain the Eyelash Learning Curve and how documented standard operating procedures and training preserve organisational learning."
+        },
+        {
+            "name": "Standard Procedures: Benefits, Risks and Balance",
+            "description": "Evaluate advantages and disadvantages of standard work and treat standards as living methods that are improved scientifically rather than changed arbitrarily."
+        },
+        {
+            "name": "PDCA Continuous Improvement",
+            "description": "Apply Plan-Do-Check-Act as a repeating scientific-method framework for investigating, testing, verifying and standardising process improvements."
+        },
+        {
+            "name": "Organizational Quality Management",
+            "description": "Explain quality management as documented goals supported by processes and standard work instructions."
+        },
+        {
+            "name": "ISO 9000 and ISO 9001",
+            "description": "Recognise the ISO 9000 family and its quality management principles including customer focus, leadership, engagement, process approach, improvement, evidence-based decisions and relationship management."
+        },
+        {
+            "name": "Quality Management System Documentation",
+            "description": "Distinguish quality manual, process documents and detailed standard work instructions as linked layers of a quality management system."
+        },
+        {
+            "name": "Quality Policy",
+            "description": "Explain the quality policy as executive management's written quality directive and rationale for the organisation's quality effort."
+        },
+        {
+            "name": "Six Sigma Mindset and DMAIC",
+            "description": "Explain Six Sigma as a process-improvement mindset focused on managing inputs to improve outputs, organised through Define, Measure, Analyse, Improve and Control."
+        },
+        {
+            "name": "DMAIC - Define",
+            "description": "Associate process maps and FMEA with defining the process, problem and important failure modes."
+        },
+        {
+            "name": "DMAIC - Measure",
+            "description": "Associate cause-and-effect diagrams, statistics and Gauge R&R with measurement and characterisation of the problem."
+        },
+        {
+            "name": "DMAIC - Analyse",
+            "description": "Associate matrix plots and process capability studies with identifying relationships and current process performance."
+        },
+        {
+            "name": "DMAIC - Improve",
+            "description": "Associate ANOVA, regression and design of experiments with identifying and testing changes that improve outputs."
+        },
+        {
+            "name": "DMAIC - Control",
+            "description": "Associate control plans and statistical process control charts with maintaining gains and reacting to out-of-control conditions."
+        },
+        {
+            "name": "Rolled Throughput Yield",
+            "description": "Calculate rolled throughput yield as the product of yields through sequential process steps and explain why final yield can hide scrap and rework in the hidden factory."
+        },
+        {
+            "name": "Cost of Poor Quality",
+            "description": "Identify visible and hidden costs of defects, rework, disposal, delays, additional labour, lost customer expectations, lost efficiency, profits and market share."
+        }
+    ],
+    "tutorial_questions": [
+        {
+            "question_id": "5.1",
+            "question": "What is the 'Eyelash Learning Curve' problem in an organisation, and what two practices are identified in the lecture as key to creating a rapid-learning organisation?",
+            "expected_answer": "The Eyelash Learning Curve describes repeated loss of capability when experienced employees leave and their knowledge leaves with them, forcing new employees to start again. The lecture identifies two key practices: document the best known methods as standard operating procedures, and train people on those methods. This creates organisational memory so new employees can start close to where predecessors left off."
+        },
+        {
+            "question_id": "5.2",
+            "question": "Give three advantages and three disadvantages of standard operating procedures, then explain the balanced approach recommended by the lecture.",
+            "expected_answer": "Advantages include capturing and sharing lessons learned, making performance or customer progress visible and trackable, gaining common buy-in, and preventing the system itself from becoming a source of variation. Disadvantages include stifling creativity, adding bureaucracy, reducing flexibility, interfering with customer focus, describing only minimum acceptable output, legal implications and wasting time. The balanced approach is to standardise where it matters most, treat standards as living and improvable, and use the scientific method before changing them so the reason for existing methods and system impacts are understood."
+        },
+        {
+            "question_id": "5.3",
+            "question": "A machining process produces recurring burr defects. Describe how the Plan, Do, Check and Act stages could be applied to this problem using the tools emphasised in the lecture.",
+            "expected_answer": "Plan: investigate why burrs occur, for example with a process FMEA, process understanding and collection of data on possible causes; identify candidate improvements. Do: experimentally test a selected improvement using a planned random experiment. Check: evaluate whether the change produced a statistically significant improvement, for example using a hypothesis test. Act: if improved, revise the standard work, process controls and work instructions, then deploy the new method. The cycle is repeated because continuous improvement does not stop."
+        },
+        {
+            "question_id": "5.4",
+            "question": "Explain the hierarchy linking quality goals, process documents and standard work instructions in a documented quality management system.",
+            "expected_answer": "Quality goals and requirements define what the organisation is trying to achieve and why. Process documents describe how quality is managed within functions or processes. Standard work instructions provide the detailed task-level instructions needed to execute those processes, such as manufacturing, inspection, maintenance and responses to process change. Together with the quality manual and related documentation they form the organisation's quality management system."
+        },
+        {
+            "question_id": "5.5",
+            "question": "List the seven ISO 9000 quality management principles identified in the lecture.",
+            "expected_answer": "Customer focus; leadership; engagement of people; process approach; improvement; evidence-based decision making; relationship management."
+        },
+        {
+            "question_id": "5.6",
+            "question": "Distinguish a quality manual, a quality process document and a standard work instruction.",
+            "expected_answer": "A quality manual explains how quality is managed across the organisation, including quality goals, responsibilities, resources, organisation and major processes. Quality process documents describe how quality is measured, maintained and improved within specific organisational functions such as manufacturing, suppliers, R&D or sales. Standard work instructions are detailed instructions for performing the tasks in those processes, including manufacturing steps, inspection, maintenance, detecting process change and correcting it."
+        },
+        {
+            "question_id": "5.7",
+            "question": "What is a quality policy, and why is it different from a detailed work instruction?",
+            "expected_answer": "The quality policy is executive management's written expression of the organisation's quality directive: the high-level 'why' and intended direction for quality. A work instruction is the detailed 'how' for performing a particular task. The policy sets direction; work instructions operationalise processes consistent with that direction."
+        },
+        {
+            "question_id": "5.8",
+            "question": "Expand DMAIC and state the central question addressed at each stage.",
+            "expected_answer": "Define: what is the problem? Measure: how will the problem be measured and characterised? Analyse: what changes or inputs are associated with the problem? Improve: what should be changed to fix or improve the process? Control: what must be kept stable, monitored and reacted to so the improvement is sustained?"
+        },
+        {
+            "question_id": "5.9",
+            "question": "Match each tool to its primary DMAIC stage as taught in the competency list: process map, FMEA, fishbone diagram, Gauge R&R, matrix plot, process capability study, ANOVA, regression, design of experiments, control plan, SPC chart.",
+            "expected_answer": "Define: process maps and FMEA. Measure: cause-and-effect/fishbone diagrams, statistics and Gauge R&R. Analyse: matrix plots and process capability studies. Improve: ANOVA, regression and design of experiments. Control: control plans and statistical process control charts."
+        },
+        {
+            "question_id": "5.10",
+            "question": "A four-step process has first-pass yields of 0.98, 0.95, 0.97 and 0.99. Calculate the rolled throughput yield and explain why it gives more information than a final inspection yield alone.",
+            "expected_answer": "RTY = 0.98 × 0.95 × 0.97 × 0.99 = 0.8938, or about 89.4%. Rolled throughput yield reflects the probability of passing through all process steps without a defect or rework. A final inspection yield can look high even when intermediate steps create scrap and rework in the hidden factory; RTY exposes the cumulative loss across the process."
+        },
+        {
+            "question_id": "5.11",
+            "question": "A factory reports a final yield of 99%, but three intermediate operations have substantial rework. Explain why final yield can be a poor measure of process quality.",
+            "expected_answer": "Final yield measures only what survives to the end and can hide internal defects that were reworked or scrapped earlier. Those intermediate defects still consume labour, material, floor space, time and capacity. Rolled throughput yield is therefore more informative because it multiplies the yields of the sequential operations and exposes the hidden factory."
+        },
+        {
+            "question_id": "5.12",
+            "question": "Identify at least six categories included in the cost of poor quality according to the competency list.",
+            "expected_answer": "Examples include the cost of finding defects, rework, replacement material, disposal of defective units, increased production cycle time, hidden labour, failure to meet customer expectations, lost opportunity for greater efficiency, missed profits, and loss of market share. Any six well-explained items from this set demonstrate the required understanding."
+        },
+        {
+            "question_id": "5.13",
+            "question": "A Six Sigma team has identified a large long-term scrap problem. Explain the Six Sigma mindset in terms of inputs and outputs, and state what reaching Six Sigma represents statistically in the lecture framework.",
+            "expected_answer": "Six Sigma focuses on understanding and managing process inputs so that process outputs improve rather than relying only on final inspection. It uses DMAIC to define, measure, analyse, improve and control the process. As a performance goal, Six Sigma represents extremely high process capability; the lecture capability table associates six sigma with Cpk about 2.0, yield about 99.9997% and about 3.4 defects per million opportunities under the long-term shift convention used in the course."
+        }
+    ],
+    "vector_store_id": "",
+    "index": {
+        "$numberInt": "5"
+    }
+}

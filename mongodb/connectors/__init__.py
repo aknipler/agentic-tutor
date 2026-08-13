@@ -1,4 +1,10 @@
 from .base import get_mongo_client
+from .analytics import (
+    get_tutor_message_counts,
+    get_assessor_submission_counts,
+    get_module_completion_counts,
+    clear_analytics_caches
+)
 from .modules import (
     get_modules_data,
     get_cached_modules_data
@@ -26,7 +32,13 @@ from .user_management import (
 __all__ = [
     # Base
     'get_mongo_client',
-    
+
+    # Analytics
+    'get_tutor_message_counts',
+    'get_assessor_submission_counts',
+    'get_module_completion_counts',
+    'clear_analytics_caches',
+
     # Modules
     'get_modules_data',
     'get_cached_modules_data',
