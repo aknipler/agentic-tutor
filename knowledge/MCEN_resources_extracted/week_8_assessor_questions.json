@@ -1,0 +1,125 @@
+{
+    "_id": {
+        "$oid": "0029d1bc2e72499298279563"
+    },
+    "title": "Week 8 - Design of Experiments",
+    "topics": [
+        {
+            "name": "The Experimentation Method",
+            "description": "Use active experimentation to identify influential predictors."
+        },
+        {
+            "name": "Main Effects and Interactions",
+            "description": "Quantify factor effects and interactions using factorial experiments and graphs."
+        },
+        {
+            "name": "Design of Experiments",
+            "description": "Understand factors, levels, treatments, runs, blocks, repeats, replicates, and design matrices."
+        },
+        {
+            "name": "Full Factorial Models",
+            "description": "Explore all factor-level permutations and recognise run-count growth."
+        },
+        {
+            "name": "Yates Labelling",
+            "description": "Use letter-based factor and interaction labels and understand blocking/confounding."
+        },
+        {
+            "name": "Partial Factorial Design",
+            "description": "Understand aliasing, confounding, and design resolution."
+        },
+        {
+            "name": "Centre Points",
+            "description": "Use centre points to detect quadratic curvature."
+        },
+        {
+            "name": "Central Composite Designs",
+            "description": "Augment factorial designs with axial points to estimate quadratic models."
+        },
+        {
+            "name": "Computer Experiments and Latin Hypercubes",
+            "description": "Use efficient point layouts for multi-dimensional computer experiments."
+        }
+    ],
+    "tutorial_questions": [
+        {
+            "question_id": "8.1",
+            "question": "Why is DOE useful when several possible factors may affect a response?",
+            "expected_answer": "Changing several factors one at a time can miss interactions and fail to cover the full factor space. DOE changes factors systematically so main effects and interactions can be estimated efficiently."
+        },
+        {
+            "question_id": "8.2",
+            "question": "Define factor, level, treatment combination, run, and block.",
+            "expected_answer": "A factor is an input variable; a level is a selected value of a factor; a treatment combination is a specific combination of factor levels; a run is one response measurement; a block is a set of runs performed together."
+        },
+        {
+            "question_id": "8.3",
+            "question": "What is the difference between a repeat and a replicate?",
+            "expected_answer": "A repeat is a repeated measurement of the same treatment combination and estimates experimental error. A replicate reproduces the treatment combination as a separate setup and also captures setup variation."
+        },
+        {
+            "question_id": "8.4",
+            "question": "Two factors A and B each have levels -1 and +1. List the full-factorial treatment combinations.",
+            "expected_answer": "(-1,-1), (+1,-1), (-1,+1), (+1,+1). A 2^2 full factorial requires four treatment combinations before repeats or replicates."
+        },
+        {
+            "question_id": "8.5",
+            "question": "What is the main effect of a factor?",
+            "expected_answer": "The average change in response produced by changing that factor's level, averaging over levels of the other factors."
+        },
+        {
+            "question_id": "8.6",
+            "question": "What do parallel versus strongly non-parallel lines indicate on an interaction plot?",
+            "expected_answer": "Parallel lines indicate little or no interaction. Strongly non-parallel or crossing lines indicate that the effect of one factor depends on the level of another."
+        },
+        {
+            "question_id": "8.7",
+            "question": "Why can one-factor-at-a-time testing identify the wrong optimum when interactions exist?",
+            "expected_answer": "Because the effect of one factor can depend on the other factor's level, an untested corner may be best even when sequential OFAT testing suggests otherwise."
+        },
+        {
+            "question_id": "8.8",
+            "question": "How many runs are required for a two-level full factorial with 10 factors? Why can this be impractical?",
+            "expected_answer": "2^10=1024 treatment combinations. Run count grows exponentially, which can make the experiment costly and time-consuming."
+        },
+        {
+            "question_id": "8.9",
+            "question": "What do orthogonal and balanced mean as desirable reduced-design properties?",
+            "expected_answer": "Balanced means factor levels are represented evenly. Orthogonal means effects can be estimated independently rather than being unnecessarily correlated."
+        },
+        {
+            "question_id": "8.10",
+            "question": "What is Yates labelling?",
+            "expected_answer": "Factors are relabelled with letters such as A, B, C; interactions use combined letters such as AB or ABC."
+        },
+        {
+            "question_id": "8.11",
+            "question": "What is confounding or aliasing in a fractional factorial design?",
+            "expected_answer": "Two or more effects share the same pattern in the reduced design and therefore cannot be estimated separately."
+        },
+        {
+            "question_id": "8.12",
+            "question": "Compare Resolution III, IV and V designs.",
+            "expected_answer": "Resolution III: main effects are not confounded with each other but are confounded with two-factor interactions. Resolution IV: main effects are clear of two-factor interactions, while two-factor interactions are confounded with each other. Resolution V: main effects and two-factor interactions are not confounded with one another; only higher-order interactions are aliased with them."
+        },
+        {
+            "question_id": "8.13",
+            "question": "Why add a centre point to a two-level factorial experiment?",
+            "expected_answer": "To detect quadratic curvature that corner-only factorial points can miss if the true centre response differs from the linear corner-based prediction."
+        },
+        {
+            "question_id": "8.14",
+            "question": "What is a central composite design and when is it useful?",
+            "expected_answer": "A CCD augments a factorial design with centre and axial points, allowing quadratic terms, main effects and interactions to be estimated when curvature is present."
+        },
+        {
+            "question_id": "8.15",
+            "question": "Why can random sampling be inefficient in computer experiments, and what does a Latin hypercube improve?",
+            "expected_answer": "Random points can cluster and leave gaps. A Latin hypercube distributes points more evenly across each variable range for more efficient multi-dimensional coverage."
+        }
+    ],
+    "vector_store_id": "vs_week8_doe",
+    "index": {
+        "$numberInt": "7"
+    }
+}

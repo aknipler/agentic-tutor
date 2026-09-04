@@ -1,0 +1,137 @@
+{
+    "_id": {
+        "$oid": "4f9df7e176c54f36997de69b"
+    },
+    "title": "Week 9 - Reliability and Maintenance",
+    "topics": [
+        {
+            "name": "Reliability",
+            "description": "Interpret reliability, utilisation, rated life, PDF, CDF, survival, and hazard functions."
+        },
+        {
+            "name": "Reliability Functions Interpretations",
+            "description": "Relate reliability-function shapes to life-cycle failure behaviour."
+        },
+        {
+            "name": "Distribution Fitting and Weibull Distribution",
+            "description": "Use Weibull beta and eta to classify failure behaviour."
+        },
+        {
+            "name": "Reliability of Systems",
+            "description": "Interpret bathtub curves and system-level reliability models."
+        },
+        {
+            "name": "Reliability Block Diagrams",
+            "description": "Calculate series and parallel reliability and understand redundancy."
+        },
+        {
+            "name": "MTTF, MTBF, MTTR and Hazard Rates",
+            "description": "Relate failure, repair, uptime, and hazard measures."
+        },
+        {
+            "name": "Maintenance Plans",
+            "description": "Use availability, downtime, service cost, TCO, and failure mode to reason about maintenance strategy."
+        }
+    ],
+    "tutorial_questions": [
+        {
+            "question_id": "9.1",
+            "question": "State the definition of product reliability used in the lecture.",
+            "expected_answer": "The probability that a product will operate within specification for a specified duration under designed operating conditions without failure."
+        },
+        {
+            "question_id": "9.2",
+            "question": "A switch is rated for 20,000 actuations and used 5 times per day. Estimate rated life in years.",
+            "expected_answer": "Usage rate=5×365=1825 actuations/year. L=N/r=20000/1825≈10.96 years."
+        },
+        {
+            "question_id": "9.3",
+            "question": "In 100 components using 500-hour bins, 12 fail in one bin. Calculate the PDF estimate.",
+            "expected_answer": "PDF=12/(100×500)=0.00024 per hour."
+        },
+        {
+            "question_id": "9.4",
+            "question": "If 28 of 100 components have failed by 2000 h, calculate CDF and reliability.",
+            "expected_answer": "CDF=28/100=0.28. R=1-CDF=0.72."
+        },
+        {
+            "question_id": "9.5",
+            "question": "At the start of an interval 80 units survive and 8 fail. What is the failure-rate fraction?",
+            "expected_answer": "8/80=0.10, or 10%."
+        },
+        {
+            "question_id": "9.6",
+            "question": "Explain PDF, CDF, reliability, and hazard physically.",
+            "expected_answer": "PDF describes failure-time distribution; CDF is fraction/probability failed by time t; reliability is fraction/probability surviving beyond t and equals 1-CDF; hazard is failure tendency among units surviving to that point."
+        },
+        {
+            "question_id": "9.7",
+            "question": "What do decreasing, constant, and increasing hazards indicate?",
+            "expected_answer": "Decreasing hazard: early-life failures. Constant hazard: normal-life random failures. Increasing hazard: end-of-life/wear-out failures."
+        },
+        {
+            "question_id": "9.8",
+            "question": "For a Weibull model, interpret beta <1, =1, >1, and eta.",
+            "expected_answer": "Beta is shape: beta<1 early-life, beta=1 constant-hazard normal-life, beta>1 wear-out. Eta is the scale parameter or characteristic-life scale."
+        },
+        {
+            "question_id": "9.9",
+            "question": "Why is the bathtub curve useful for a system with many components?",
+            "expected_answer": "It separates early-life, normal-life, and wear-out regions, which can involve different mechanisms and may require different fitted distributions or maintenance approaches."
+        },
+        {
+            "question_id": "9.10",
+            "question": "Components with reliabilities 0.98, 0.95 and 0.99 are required in series. Calculate system reliability.",
+            "expected_answer": "R=0.98×0.95×0.99=0.92169≈0.922. Series reliability is lower than the least reliable component."
+        },
+        {
+            "question_id": "9.11",
+            "question": "Two redundant components have reliabilities 0.90 and 0.80. Calculate parallel reliability.",
+            "expected_answer": "R=1-(1-0.90)(1-0.80)=1-0.02=0.98."
+        },
+        {
+            "question_id": "9.12",
+            "question": "Explain series-system warranty reliability versus availability in a redundant system.",
+            "expected_answer": "Warranty/series reliability treats any component failure as requiring service, so all components must remain healthy. Availability considers whether redundancy allows continued operation despite one failed component."
+        },
+        {
+            "question_id": "9.13",
+            "question": "Distinguish MTTF, MTBF and MTTR.",
+            "expected_answer": "MTTF is mean time to failure for a population/non-repairable item; MTBF is mean operating time between failures for repairable/replaced systems; MTTR is mean time to repair."
+        },
+        {
+            "question_id": "9.14",
+            "question": "MTBF=900 h and MTTR=100 h. Calculate in-service and downtime rates.",
+            "expected_answer": "In-service=900/(900+100)=0.90. Downtime=100/1000=0.10."
+        },
+        {
+            "question_id": "9.15",
+            "question": "If MTBF=5000 h, calculate the average hazard rate using the course relationship.",
+            "expected_answer": "Average hazard rate=1/MTBF=1/5000=0.0002 per hour."
+        },
+        {
+            "question_id": "9.16",
+            "question": "A system has element hazard rates 0.0001, 0.0003 and 0.0002 per hour. What is the system average hazard rate?",
+            "expected_answer": "Sum the rates: 0.0006 per hour."
+        },
+        {
+            "question_id": "9.17",
+            "question": "What cost categories are included in total cost of ownership?",
+            "expected_answer": "Purchase, operating, downtime, service, useful-life, and residual-value costs."
+        },
+        {
+            "question_id": "9.18",
+            "question": "Why is preventive maintenance particularly relevant for wear-out behaviour?",
+            "expected_answer": "Wear-out has increasing hazard with age, so preventive servicing or replacement before the high-risk region can reduce unexpected failures and downtime."
+        },
+        {
+            "question_id": "9.19",
+            "question": "What end-of-life pathways are identified in the competency list?",
+            "expected_answer": "Repair, recycling, and landfill."
+        }
+    ],
+    "vector_store_id": "vs_week9_reliability",
+    "index": {
+        "$numberInt": "8"
+    }
+}

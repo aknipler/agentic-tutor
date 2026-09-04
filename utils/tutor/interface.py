@@ -5,7 +5,6 @@ import streamlit as st
 import openai
 import json
 from typing import Optional, Dict, Any, Union, List, Tuple
-from datetime import datetime
 
 # This module's debug prints echo raw model output (equations, special
 # characters like the Unicode minus sign U+2212) straight to the console. On
@@ -224,20 +223,19 @@ def handle_function_call(tool_call: Dict[str, Any], user_id: str,
         return ToolCallResult(handle_competency_check(func_args, user_id))
     return None
 
-def handle_topic_transition() -> Optional[str]:
-    """Handle topic transition state and return a message if in transition"""
-    if st.session_state.get("in_topic_transition", False):
-        transition_time = st.session_state.get("topic_transition_time", 0)
-        current_time = datetime.now().timestamp()
-        if current_time - transition_time < 5:
-            print("[Topic Transition] Recent transition detected, skipping processing")
-            return "Processing topic transition, please wait..."
-        else:
-            print("[Topic Transition] Old transition detected, clearing state")
-            st.session_state["in_topic_transition"] = False
-            if "topic_transition_time" in st.session_state:
-                del st.session_state["topic_transition_time"]
-    return None
+# There is deliberately no post-transition guard here any more. A five-second
+# one used to sit at the top of get_bot_response: a student who replied within
+# five seconds of being moved to a new topic got "Processing topic transition,
+# please wait..." instead of an answer, and because their message had already
+# been added to the chat history and the prompt slot was then cleared, the
+# question was silently thrown away - they had to notice and retype it. That
+# branch also never cleared `in_topic_transition`, so the same message could be
+# eaten twice, and the filler text stayed in the transcript for good.
+#
+# Nothing is in flight for it to protect: by the time the flag is set, the
+# competency write, the topic change and the new topic's opening question have
+# all already happened inside the turn (see handle_competency_update_transition).
+# The flag now only tells the render loop to repaint, and is cleared there.
 
 def prepare_tools_configuration(vector_store_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """Prepare the tools configuration for the AI response"""
@@ -632,7 +630,6 @@ def handle_competency_update_transition(completed_topic_name: str, module: Union
             return None
 
         TutorState.set_in_transition(True)
-        st.session_state["topic_transition_time"] = datetime.now().timestamp()
 
         TutorState.clear_topic_context(str(module), completed_topic_name)
 
@@ -672,22 +669,12 @@ def get_bot_response(user_input: str, module: Union[str, int], stream: bool = Tr
     # Created up front, before anything that can fail, so the except block
     # below always has somewhere to show a reply - previously an exception
     # anywhere in this function meant nothing was displayed, nothing was
-    # logged, and current_prompt still reset, so a retry looked identical
+    # logged, and the message was dequeued anyway, so a retry looked identical
     # and could fail the same silent way again with no visible trace.
     text_placeholder = st.empty()
     topic_name = ""
 
     try:
-        # Check for topic transition
-        transition_message = handle_topic_transition()
-        if transition_message:
-            # Add transition message to chat history
-            TutorState.add_message(str(module), {
-                "role": "assistant",
-                "content": transition_message
-            })
-            return transition_message
-
         # Setup client and load prompt
         client = setup_openai_client()
         system_prompt = load_tutor_prompt()
@@ -928,8 +915,8 @@ def get_bot_response(user_input: str, module: Union[str, int], stream: bool = Tr
         # chat history, and log it, so the turn isn't silently dropped and a
         # retry doesn't look identical to an untried message. This is what was
         # missing before - the exception was caught, but the returned message
-        # was never displayed, stored, or logged, and current_prompt still
-        # reset, so a student's retry could fail the exact same silent way
+        # was never displayed, stored, or logged, and the message was dequeued
+        # anyway, so a student's retry could fail the exact same silent way
         # with no trace anywhere.
         # The traceback, not just the message: this block covers the whole turn -
         # two API calls, the competency write, the topic change and the logging -
@@ -1066,10 +1053,6 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
             st.markdown("---")
             st.subheader("Chat with the AI Tutor")
             
-            # Initialize session state for current prompt if not exists
-            if "current_prompt" not in st.session_state:
-                st.session_state.current_prompt = None
-            
             # Create a container for the chat history
             history_container = st.container()
             
@@ -1083,22 +1066,34 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
                 else:
                     print(f"[Tutor Interface] No chat history found for module {module_id}")
             
-            # Check if we need to process a new message
-            if st.session_state.current_prompt:
-                prompt = st.session_state.current_prompt
+            # Answer the oldest message the student is still waiting on. It stays
+            # on the queue until its answer is complete: submitting a message
+            # fires a Streamlit rerun, which stops whatever script run is in
+            # progress, so a turn can be cut off part-way through streaming. Left
+            # queued, it is simply answered on the next run instead of vanishing.
+            pending_prompt = TutorState.peek_prompt(str(module_id))
+            if pending_prompt is not None:
                 try:
                     # Get and display assistant response
                     with st.chat_message("assistant"):
-                        response = get_bot_response(prompt, module_id, stream=True, vector_store_id=vector_store_id)
+                        response = get_bot_response(pending_prompt, module_id, stream=True, vector_store_id=vector_store_id)
                         # The response is already displayed via the placeholder in get_bot_response
-                    
-                    # Reset the current prompt
-                    st.session_state.current_prompt = None
+
+                    # Answered - it is no longer owed a reply.
+                    TutorState.pop_prompt(str(module_id))
 
                     # Popped before the checks below, not inside them: short-circuit
                     # evaluation would leave the flag set and fire a stray rerun on
                     # some later turn.
                     topic_changed = st.session_state.pop("tutor_topic_changed", False)
+
+                    # Read and cleared in one place, for the same reason: a
+                    # transition is a within-turn fact, and leaving it set is what
+                    # armed the old five-second guard against the student's next
+                    # message.
+                    was_in_transition = TutorState.get_in_transition()
+                    if was_in_transition:
+                        TutorState.set_in_transition(False)
 
                     # The progress panel above was already rendered this run from
                     # the pre-turn cached summary (see progress_key above). A
@@ -1109,17 +1104,26 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
                     # status used to appear stuck until the next unrelated refresh.
                     # A topic change repaints too: replayed history has to be drawn
                     # by render_chat_history to get the student's own turns right.
-                    if topic_changed or TutorState.get_in_transition() or progress_key not in st.session_state:
+                    # Anything still queued needs a run of its own to be answered in.
+                    if (topic_changed or was_in_transition
+                            or progress_key not in st.session_state
+                            or TutorState.pending_prompt_count(str(module_id))):
                         # Force a rerun to refresh the UI with the new topic/progress
                         st.rerun()
-                
+
                 except Exception as e:
+                    # Drop it rather than retrying forever: get_bot_response
+                    # handles its own failures and returns an apology, so reaching
+                    # here means the failure is in rendering the turn and will
+                    # repeat identically on every rerun, wedging everything queued
+                    # behind it.
+                    TutorState.pop_prompt(str(module_id))
                     print(f"[Error] Failed to process message: {str(e)}")
                     st.error(f"Error processing your message: {str(e)}")
                     if st.session_state.get("debug_mode", False):
                         st.exception(e)
                     st.info("Please try rephrasing your question or try again later.")
-            
+
             # Add a small space between chat history and input
             st.markdown("<br>", unsafe_allow_html=True)
             
@@ -1131,27 +1135,25 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
                 if module_complete
                 else "Display your competency by answering questions"
             )
-            if prompt := st.chat_input(chat_placeholder, disabled=module_complete):
-                # Display the user message immediately
-                # with history_container:
-                #     with st.chat_message("user"):
-                #         st.markdown(prompt)
-                
-                # Store the prompt in session state
-                st.session_state.current_prompt = prompt
-                
+            if submitted_prompt := st.chat_input(chat_placeholder, disabled=module_complete):
+                # Queue it. Nothing is ever discarded on the grounds that the
+                # tutor is busy - a message sent mid-answer, or seconds after a
+                # topic transition, waits its turn and is answered rather than
+                # being thrown away with a "please wait" the student can't act on.
+                TutorState.enqueue_prompt(str(module_id), submitted_prompt)
+
                 # Get current topic name
                 current_topic = TutorState.get_current_topic(str(module_id))
                 topic_name = current_topic.get("name", "")
-                
+
                 # Add user message to chat history using TutorState
                 user_message = ChatMessage(
-                    role="user", 
-                    content=prompt,
+                    role="user",
+                    content=submitted_prompt,
                     topic_name=topic_name
                 ).to_dict()
                 TutorState.add_message(str(module_id), user_message)
-                
+
                 # Trigger rerun to process the message
                 st.rerun()
         

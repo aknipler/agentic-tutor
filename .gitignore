@@ -7,3 +7,6 @@
 module_data*
 question_data*
 /data
+# Local working notes. Holds the test login code, which is a live credential -
+# keep it out of the repo.
+CLAUDE.md

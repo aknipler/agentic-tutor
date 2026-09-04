@@ -93,16 +93,41 @@ def load_source_docs(data_dir: Path):
     return parsed
 
 
-def transform(doc: dict, new_index: int, learning_outcomes_by_lecture: dict) -> dict:
+def load_existing_vector_store_ids(collection) -> dict:
+    """Read {index: vector_store_id} currently live in modules_live.
+
+    setup_vector_stores.py and admin.py write real vector store ids straight to
+    Mongo; they are never synced back to the source JSON files, so a source file
+    can carry a stale empty/placeholder value while the database holds the real
+    one (this happened for modules 4-6). Read-only, so safe to call in dry runs.
+    """
+    return {
+        doc["index"]: doc["vector_store_id"]
+        for doc in collection.find({}, {"index": 1, "vector_store_id": 1})
+        if doc.get("vector_store_id")
+    }
+
+
+def transform(doc: dict, new_index: int, learning_outcomes_by_lecture: dict,
+              existing_vector_store_ids: dict) -> dict:
     """Build a clean modules_live document: drop _id, set 1-based int index.
 
     `learning_outcomes` is merged into each topic positionally (see module
     docstring). Lecture number == new_index. Topics beyond the available
     outcomes list, or lectures with no entry at all, are left untouched -
     the field stays optional.
+
+    A source file with no `vector_store_id` (or an empty one) falls back to
+    whatever is already live in the database for this index, rather than
+    wiping out a real link that only ever existed in Mongo. A source file that
+    does supply one (including a lecturer placeholder for a brand new module)
+    always wins - that's the signal to link a fresh module.
     """
     out = {field: doc[field] for field in _KEEP_FIELDS if field in doc}
     out["index"] = new_index  # plain int, 1-based (app keys progress by str(index))
+
+    if not out.get("vector_store_id") and new_index in existing_vector_store_ids:
+        out["vector_store_id"] = existing_vector_store_ids[new_index]
 
     outcomes_for_lecture = learning_outcomes_by_lecture.get(new_index, [])
     topics = out.get("topics", [])
@@ -128,11 +153,14 @@ def describe(path: Path, doc: dict, transformed: dict) -> None:
     print(f"    topics           : {len(topics)}")
     print(f"    tutorial_questions: {len(questions)}")
 
-    vsid = doc.get("vector_store_id", "")
-    if not vsid or not vsid.startswith("vs_") or "week" in vsid:
+    source_vsid = doc.get("vector_store_id", "")
+    final_vsid = transformed.get("vector_store_id", "")
+    if source_vsid != final_vsid:
+        print(f"    vector_store_id  : source has none - preserving live value {final_vsid!r} from the database")
+    elif not final_vsid or not final_vsid.startswith("vs_") or "week" in final_vsid:
         # Real OpenAI ids look like vs_abc123...; the lecturer placeholders read
         # vs_week1_probability_reliability_quality.
-        print(f"    [warn] vector_store_id looks like a placeholder: {vsid!r}")
+        print(f"    [warn] vector_store_id looks like a placeholder: {final_vsid!r}")
         print("           -> create a real store in admin.py and relink before use.")
 
     topics_missing_q = [t.get("name") for t in topics if not t.get("question")]
@@ -158,11 +186,18 @@ def main() -> None:
     args = parser.parse_args()
 
     db_name = st.secrets["MONGODB_DATABASE_NAME"]
+    client = get_mongo_client()
+    collection = client[db_name][COLLECTION]
+
+    # Read-only, so fetched in both modes: it's what makes the dry-run preview
+    # of vector_store_id accurate instead of just describing the source files.
+    existing_vector_store_ids = load_existing_vector_store_ids(collection)
 
     parsed = load_source_docs(args.data_dir)
     learning_outcomes_by_lecture = load_learning_outcomes(args.learning_outcomes)
     transformed = [
-        transform(doc, new_index=i, learning_outcomes_by_lecture=learning_outcomes_by_lecture)
+        transform(doc, new_index=i, learning_outcomes_by_lecture=learning_outcomes_by_lecture,
+                  existing_vector_store_ids=existing_vector_store_ids)
         for i, (_path, doc) in enumerate(parsed, start=1)
     ]
 
@@ -179,10 +214,6 @@ def main() -> None:
     if not args.commit:
         print("\nDry run complete - nothing written. Re-run with --commit to load.")
         return
-
-    client = get_mongo_client()
-    db = client[db_name]
-    collection = db[COLLECTION]
 
     existing = collection.count_documents({})
     print(f"\n[COMMIT] {COLLECTION} currently holds {existing} document(s); replacing them.")

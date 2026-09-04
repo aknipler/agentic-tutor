@@ -1,0 +1,134 @@
+{
+    "_id": {
+        "$oid": "90ca7eb6e87244ef97f48008"
+    },
+    "title": "Week 7 - Regression",
+    "topics": [
+        {
+            "name": "The Regression Method",
+            "description": "Determine statistical relationships between a response and one or more predictors and develop an estimating equation."
+        },
+        {
+            "name": "Coefficient of Correlation",
+            "description": "Interpret r as a measure of linear association without inferring causation."
+        },
+        {
+            "name": "Ordinary Least Squares Linear Regression",
+            "description": "Understand the simple linear model, assumptions, residuals, and least-squares fitting."
+        },
+        {
+            "name": "Coefficient of Determination",
+            "description": "Interpret R-squared and adjusted R-squared."
+        },
+        {
+            "name": "RMSE",
+            "description": "Interpret root mean square error as the standard error of regression."
+        },
+        {
+            "name": "ANOVA of the Regression",
+            "description": "Interpret regression ANOVA, coefficient p-values, and residual diagnostics."
+        },
+        {
+            "name": "Regression Mistakes and Extreme Points",
+            "description": "Avoid extrapolation and causal claims; distinguish leverage points and outliers."
+        },
+        {
+            "name": "Polynomial Regression",
+            "description": "Use higher-order terms when residual analysis indicates curvature."
+        },
+        {
+            "name": "Multiple Regression",
+            "description": "Use multiple, transformed, and interaction predictors while avoiding strongly correlated inputs."
+        },
+        {
+            "name": "Maximum Likelihood Regression",
+            "description": "Understand maximum likelihood estimation for fitting distribution parameters."
+        }
+    ],
+    "tutorial_questions": [
+        {
+            "question_id": "7.1",
+            "question": "What is regression, and what are the response and predictor variables?",
+            "expected_answer": "Regression determines the statistical relationship between a response (output) and one or more predictors (inputs) and develops an estimating equation Y=f(X1,...,Xn). The response is predicted or explained; predictors are used to estimate it."
+        },
+        {
+            "question_id": "7.2",
+            "question": "A dataset has r = 0.92 between machine speed and defect rate. What can and cannot be concluded?",
+            "expected_answer": "r=0.92 indicates a strong positive linear association. It does not prove that machine speed causes the defect rate to increase; correlation is not causation."
+        },
+        {
+            "question_id": "7.3",
+            "question": "If r = 0 between X and Y, does this prove they are unrelated? Explain.",
+            "expected_answer": "No. r=0 means no linear relationship, but a nonlinear relationship may still exist."
+        },
+        {
+            "question_id": "7.4",
+            "question": "State the simple OLS regression model and explain slope and intercept.",
+            "expected_answer": "Y=mX+b. m is the change in predicted Y for a one-unit change in X; b is predicted Y when X=0."
+        },
+        {
+            "question_id": "7.5",
+            "question": "List the main OLS regression assumptions used in the lecture.",
+            "expected_answer": "A suitable model form exists; Y values are independent; Y variability is approximately constant across X; residual variability is not significantly non-normal; and X is treated as having no measurement error."
+        },
+        {
+            "question_id": "7.6",
+            "question": "Define a residual and explain what OLS minimizes.",
+            "expected_answer": "e_i=Y_observed,i-Y_predicted,i. OLS selects coefficients that minimize the sum of squared residuals, sum(e_i^2)."
+        },
+        {
+            "question_id": "7.7",
+            "question": "SS_regression=720 and SS_total=900. Calculate R-squared and interpret it.",
+            "expected_answer": "R-squared=720/900=0.80, or 80%. The model explains 80% of the observed response variability."
+        },
+        {
+            "question_id": "7.8",
+            "question": "Why is adjusted R-squared useful when comparing models with different numbers of predictors?",
+            "expected_answer": "It accounts for the number of predictors, helping judge whether added terms improve the model enough to justify their inclusion."
+        },
+        {
+            "question_id": "7.9",
+            "question": "A regression has SSE=360 and 16 residual degrees of freedom. Calculate RMSE.",
+            "expected_answer": "RMSE=sqrt(360/16)=sqrt(22.5)≈4.74. It represents the typical residual error in response-variable units."
+        },
+        {
+            "question_id": "7.10",
+            "question": "The overall regression p-value is 0.001, but one predictor has p=0.48. Interpret this.",
+            "expected_answer": "The model as a whole is statistically significant, but the predictor with p=0.48 is not significant at a conventional alpha such as 0.05 and may not contribute meaningfully after accounting for other terms."
+        },
+        {
+            "question_id": "7.11",
+            "question": "What residual plots should be examined when assessing a regression model?",
+            "expected_answer": "Histogram or normal probability plot; residuals versus fitted values; residuals versus run order; and residuals versus predictors or other variables. Look for approximate normality, constant spread, centering around zero, and absence of systematic patterns."
+        },
+        {
+            "question_id": "7.12",
+            "question": "Distinguish a leverage point from an outlier.",
+            "expected_answer": "A leverage point is extreme in predictor space and can strongly influence the fit. An outlier has a large residual because its observed response is far from the model prediction."
+        },
+        {
+            "question_id": "7.13",
+            "question": "Why should a regression generally not be extrapolated beyond the fitted data range?",
+            "expected_answer": "The fitted relationship is supported only within the observed predictor range; outside it the true relationship may change or become nonlinear."
+        },
+        {
+            "question_id": "7.14",
+            "question": "Residuals show a clear U-shaped pattern. What does this suggest?",
+            "expected_answer": "The linear model is missing curvature. Consider a polynomial term such as X^2, then reassess significance and residuals."
+        },
+        {
+            "question_id": "7.15",
+            "question": "Why is strong correlation between predictors undesirable in multiple regression?",
+            "expected_answer": "It creates overlapping information, unstable coefficient estimates, and difficulty separating individual predictor effects."
+        },
+        {
+            "question_id": "7.16",
+            "question": "How does maximum likelihood estimation differ conceptually from OLS?",
+            "expected_answer": "OLS minimizes squared residuals. Maximum likelihood chooses distribution parameters that make the observed data most probable under the assumed distribution."
+        }
+    ],
+    "vector_store_id": "vs_week7_regression",
+    "index": {
+        "$numberInt": "6"
+    }
+}

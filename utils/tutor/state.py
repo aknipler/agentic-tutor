@@ -1,7 +1,6 @@
 """State management for the tutor system"""
 from typing import Optional, Dict, Any, List
 import streamlit as st
-from datetime import datetime
 
 from .config.settings import TutorConfig
 
@@ -85,16 +84,65 @@ class TutorState:
     
     @staticmethod
     def get_in_transition() -> bool:
-        """Get global transition state"""
+        """Whether this turn moved the student to a different topic.
+
+        Read once per turn, by the render loop, to decide whether the page needs
+        repainting - and cleared there. It is a within-turn marker, not a state
+        the student can be left sitting in: it used to be set on a transition and
+        never cleared, which armed a five-second guard that swallowed whatever
+        they said next.
+        """
         return st.session_state.get("in_topic_transition", False)
-    
+
     @staticmethod
     def set_in_transition(state: bool) -> None:
-        """Set global transition state"""
+        """Set the transition marker"""
         st.session_state["in_topic_transition"] = state
-        if state:
-            st.session_state["topic_transition_time"] = datetime.now().timestamp()
-    
+
+    @staticmethod
+    def _get_prompt_queue_key(module: str) -> str:
+        """Get the standardized pending-prompt queue key for a module"""
+        return f"pending_prompts_{module}"
+
+    @staticmethod
+    def enqueue_prompt(module: str, prompt: str) -> None:
+        """Queue a message the student has just sent, to be answered in turn.
+
+        A queue rather than the single `current_prompt` slot this replaced. That
+        slot was session-wide, so it lost a message two ways: a second message
+        sent while the first was still being answered overwrote it (Streamlit
+        stops the running script when a widget fires, so the first turn never
+        finished), and it was shared by every module page.
+        """
+        key = TutorState._get_prompt_queue_key(module)
+        if key not in st.session_state:
+            st.session_state[key] = []
+        st.session_state[key].append(prompt)
+
+    @staticmethod
+    def peek_prompt(module: str) -> Optional[str]:
+        """The next queued message, without removing it.
+
+        Left on the queue until its answer is complete (see pop_prompt), so a
+        turn that is interrupted part-way is retried rather than dropped.
+        """
+        queue = st.session_state.get(TutorState._get_prompt_queue_key(module), [])
+        return queue[0] if queue else None
+
+    @staticmethod
+    def pop_prompt(module: str) -> Optional[str]:
+        """Remove the head of the queue, once it has been dealt with"""
+        key = TutorState._get_prompt_queue_key(module)
+        queue = st.session_state.get(key, [])
+        if not queue:
+            return None
+        return queue.pop(0)
+
+    @staticmethod
+    def pending_prompt_count(module: str) -> int:
+        """How many of the student's messages are still waiting for an answer"""
+        return len(st.session_state.get(TutorState._get_prompt_queue_key(module), []))
+
     @staticmethod
     def set_topic_cutoff_index(module: str) -> None:
         """Set the cutoff index for the new topic"""
