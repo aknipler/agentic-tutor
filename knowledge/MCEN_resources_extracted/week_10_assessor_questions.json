@@ -1,0 +1,129 @@
+{
+    "_id": {
+        "$oid": "d205b086a80546c0a1ec07c6"
+    },
+    "title": "Week 10 - Parametric Distribution Analysis",
+    "topics": [
+        {
+            "name": "Physics-Guided Distribution Fitting",
+            "description": "Select candidate lifetime distributions based on the expected physical failure mechanism before comparing goodness of fit."
+        },
+        {
+            "name": "Weibull Distribution",
+            "description": "Use the Weibull distribution for early-life, normal-life, and wear-out failure behaviour."
+        },
+        {
+            "name": "Lognormal Distribution",
+            "description": "Recognise lognormal models as suitable for life processes associated with diffusion-driven mechanisms such as corrosion and migration."
+        },
+        {
+            "name": "Exponential Distribution",
+            "description": "Recognise the exponential distribution as suitable for random external-event failures during normal life."
+        },
+        {
+            "name": "Anderson-Darling Goodness of Fit",
+            "description": "Use the Anderson-Darling statistic to compare candidate distributions, with smaller values indicating better fit."
+        },
+        {
+            "name": "Maximum Likelihood Estimation",
+            "description": "Interpret MLE parameter estimates and their confidence information after fitting a lifetime distribution."
+        },
+        {
+            "name": "Life Statistics from a Fitted Distribution",
+            "description": "Use a fitted distribution to estimate quantities such as mean time to failure and life percentiles."
+        },
+        {
+            "name": "Uncensored Life Data",
+            "description": "Recognise uncensored data as life-test data in which every tested item is run to failure."
+        },
+        {
+            "name": "Censored Life Data",
+            "description": "Recognise censored observations and understand that censoring changes the maximum-likelihood fitting procedure and increases uncertainty."
+        },
+        {
+            "name": "Repair and Service Life Data",
+            "description": "Use field repair and service records cautiously because censoring, missing failure modes, and incomplete service history can affect life-data analysis."
+        }
+    ],
+    "tutorial_questions": [
+        {
+            "question_id": "10.1",
+            "question": "Why should a reliability engineer not simply fit every available distribution and choose the one with the smallest goodness-of-fit statistic?",
+            "expected_answer": "Distribution selection should first be guided by the physics of the failure mechanism. Candidate distributions should be chosen based on whether failures are expected to be early-life manufacturing failures, random normal-life failures, wear-out failures, or diffusion-driven mechanisms. Goodness-of-fit statistics are then used to compare plausible candidates rather than replacing engineering judgement."
+        },
+        {
+            "question_id": "10.2",
+            "question": "Which candidate distribution would you first consider for a population that may show early-life, normal-life, or wear-out failures, and why?",
+            "expected_answer": "The Weibull distribution is a strong candidate because its shape parameter allows it to represent decreasing, approximately constant, or increasing hazard behaviour. It can therefore model early-life, normal-life, and wear-out failure mechanisms."
+        },
+        {
+            "question_id": "10.3",
+            "question": "A component failure mechanism is dominated by corrosion or migration governed by diffusion-like behaviour. Which life distribution is a reasonable candidate and why?",
+            "expected_answer": "A lognormal distribution is a reasonable candidate because the lecture associates it with diffusion-driven failure mechanisms such as corrosion and migration."
+        },
+        {
+            "question_id": "10.4",
+            "question": "A component mainly fails because of random external events during its normal operating life. Which lifetime distribution is a reasonable candidate?",
+            "expected_answer": "An exponential distribution is a reasonable candidate because the lecture associates it with random external-event normal-life failures and an approximately constant failure rate."
+        },
+        {
+            "question_id": "10.5",
+            "question": "Three candidate life distributions give adjusted Anderson-Darling statistics of 0.24 for Weibull, 0.81 for lognormal, and 4.7 for exponential. Which fits best according to this statistic?",
+            "expected_answer": "The Weibull distribution fits best according to the Anderson-Darling statistic because 0.24 is the smallest value. A smaller Anderson-Darling statistic indicates a better fit among the candidate distributions."
+        },
+        {
+            "question_id": "10.6",
+            "question": "What information is provided by a maximum likelihood estimation table after a lifetime distribution has been fitted?",
+            "expected_answer": "The MLE table reports estimates of the fitted distribution parameters and confidence information for those parameters. The fitted-distribution analysis can also provide derived life statistics such as mean time to failure, quartiles or percentiles, the mean, and measures of spread."
+        },
+        {
+            "question_id": "10.7",
+            "question": "What is meant by the 1% life of a fitted lifetime distribution?",
+            "expected_answer": "The 1% life is the time by which the fitted model predicts that 1% of the population has failed. Equivalently, about 99% of the population is predicted to survive beyond that time."
+        },
+        {
+            "question_id": "10.8",
+            "question": "In the lecture example, Weibull has an adjusted Anderson-Darling value near 0.223, while lognormal is about 7.426 and exponential about 19.059. What conclusion should be drawn?",
+            "expected_answer": "Among those candidate distributions, the Weibull distribution provides the best fit because its Anderson-Darling statistic is much lower than those of the lognormal and exponential alternatives."
+        },
+        {
+            "question_id": "10.9",
+            "question": "Define uncensored life-test data.",
+            "expected_answer": "Uncensored life-test data are obtained when every tested item is run until failure, so the failure time is known for every observation."
+        },
+        {
+            "question_id": "10.10",
+            "question": "Define right-censored life data using an example.",
+            "expected_answer": "A right-censored observation occurs when a test ends or an item leaves observation before it fails. For example, if a component is still operating when a 1000-hour test ends, we only know that its life exceeds 1000 hours; the exact failure time is unknown."
+        },
+        {
+            "question_id": "10.11",
+            "question": "Why can censored observations not simply be treated as ordinary failure times?",
+            "expected_answer": "A censored time is not a known failure time. It only establishes that the item survived at least to the censoring time. Treating it as a failure would bias the estimated life distribution. Maximum likelihood analysis therefore includes its survival contribution rather than a failure-density contribution."
+        },
+        {
+            "question_id": "10.12",
+            "question": "How does censoring generally affect confidence intervals on fitted life-distribution parameters and life percentiles?",
+            "expected_answer": "Censoring reduces the amount of exact failure-time information available. The fitted parameters and life estimates can remain similar, but their confidence intervals generally become wider because uncertainty increases."
+        },
+        {
+            "question_id": "10.13",
+            "question": "A test is stopped halfway through its planned duration and many surviving units are recorded as censored. What should be checked when comparing the censored fit with the full test-to-failure fit?",
+            "expected_answer": "Compare whether the same distribution remains the best fit, how much the fitted parameters change, how much life statistics such as MTTF and the 1%, 5%, and 10% life percentiles change, and how much their confidence intervals widen."
+        },
+        {
+            "question_id": "10.14",
+            "question": "Why are repair and service logs useful for reliability analysis, and what are their main limitations?",
+            "expected_answer": "They provide real field-life information from operating products. However, they can contain censored units, omit some failure modes, lack complete information about previous or last repairs, and mix different failure mechanisms unless the data are carefully separated."
+        },
+        {
+            "question_id": "10.15",
+            "question": "Why should life-data fitting generally focus on one failure mode at a time?",
+            "expected_answer": "Different failure modes can have different physical mechanisms and different lifetime distributions. Mixing them can produce a misleading fitted distribution. Other modes may need to be censored or otherwise separated so the fitted model represents one mechanism."
+        }
+    ],
+    "vector_store_id": "vs_week10_parametric_distribution_analysis",
+    "index": {
+        "$numberInt": "9"
+    }
+}
