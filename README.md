@@ -2,86 +2,54 @@
 
 A Streamlit AI tutor and assessor for **Probability, Reliability and Quality (MCEN90059)**.
 
-Students log in with a code, work through one module per lecture week, chat with a Socratic
-tutor grounded in that week's lecture material, and submit answers to tutorial questions for
-automated assessment. Progress is tracked per student in MongoDB.
+Students log in with a code and work through one module per lecture week. Each module has a
+Socratic tutor grounded in that week's lecture material, plus tutorial questions that an AI
+assessor grades. Each student's progress is stored in MongoDB.
 
-Nothing about the subject is hard-coded — see [Adapting to another subject](#adapting-to-another-subject).
-
----
+Nothing about the subject is hard-coded. See [Adapting to another subject](#adapting-to-another-subject).
+For the internals, including the topic loop and the database layout, read
+[docs/architecture.md](docs/architecture.md).
 
 ## How it works
 
 ```
-Home.py            login with a code, verified against the `users` collection
+Home.py                       login with a code, checked against the `users` collection
   |
-  +-- pages/N_Module_X.py   one page per module
+  +-- pages/N_Module_X.py     one page per module
   |     |
   |     +-- Socratic tutor chat (OpenAI + that module's vector store)
-  |     |     ...marks each topic 0/1/2 via an update_topic_competency tool call
+  |     |     marks each topic 0/1/2 with an update_topic_competency tool call
   |     |
-  |     +-- list of tutorial questions -> "Try Question" -> Assessor
+  |     +-- tutorial questions -> "Try Question" -> Assessor
   |
-  +-- pages/13_Assessor.py  submit an answer (text and/or images), get graded 0/1/2 + feedback
+  +-- pages/13_Assessor.py    submit an answer (text or images), graded 0/1/2 with feedback
   |
-  +-- pages/1_Your_Progress.py   per-module topic and question status
+  +-- pages/1_Your_Progress.py   topic and question status for each module
 ```
 
-Two OpenAI system prompts drive the behaviour: `prompts/tutor.md` (Socratic questioning,
-never hand over answers) and `prompts/assessor.md` (grade against the expected answer).
-Both are plain Markdown — edit them directly to change tone or grading strictness.
+Two system prompts drive the behaviour, `prompts/tutor.md` and `prompts/assessor.md`. Both are
+plain Markdown, so edit them directly to change the tone or how strictly answers are graded.
 
-### The topic loop
+Modules are identified by their `index` field (1, 2, 3, …) everywhere in the code. Titles are
+data. Never look a module up by title. Use the helpers in `utils/modules.py` instead.
 
-A module page teaches one topic at a time. The app decides which topic is current and tells the
-model; the model never names one itself. When it judges the student competent it calls
-`update_topic_competency(level, reason)` with level 2, and **only once that write is confirmed**
-does the page congratulate the student and move on — to the topic after the current one, wrapping
-back to fill any gaps left earlier in the module. Once every topic is at level 2 the module is
-finished and its chat input is disabled.
-
-Students don't have to go in order. Asking the tutor to move ("can we jump to ANOVA?") makes it
-call `switch_topic(topic_name, reason)`; the name is resolved against that module's own topics
-app-side, so a paraphrase or abbreviation still lands, and one that can't be resolved
-unambiguously sends the topic list back to the tutor to ask with rather than being guessed at.
-A switch is what makes the rest of the turn — the prompt, the learning outcomes, the competency
-write — follow the student. Whichever topic they end up on is recorded as `last_topic`, so the
-next session resumes there rather than at the first unfinished topic.
-
-Arriving at a topic is one path, `open_topic`, whether it came from finishing the previous one,
-a switch, or opening the page. A topic that already has a logged conversation resumes from it;
-only a topic with no history gets a freshly generated opening question. Nobody is asked to prove
-themselves twice on work they've already done.
-
-Chat history is replayed from the conversation log on login, so a student resumes mid-topic
-rather than starting the topic over.
-
-### Modules are keyed by `index`
-
-Every module document carries an `index` (1, 2, 3, …). **That is the only identifier used
-anywhere**: page files look up their module by it, progress records are stored under it, and
-the assessor records attempts against it.
-
-Titles are *data*, never keys. They come from your source files and can change freely without
-touching code. Helpers are in `utils/modules.py` (`find_module_by_index`, `sort_modules_by_index`).
-
-If you take one thing from this README: **never look a module up by title.**
-
----
+Competency is 0 (not started), 1 (partial) or 2 (full) everywhere in the app, including both
+prompts and the database.
 
 ## Setup
 
 ### 1. Install
 
 ```bash
-uv sync                       # preferred
-# or: python -m venv .venv && .venv\Scripts\activate && pip install -r requirements.txt
+uv sync
 ```
+
+Without uv, create a venv and run `pip install -r requirements.txt`.
 
 ### 2. Secrets
 
-The app reads `st.secrets`, **not** `.env` — there is no `python-dotenv` here, so a `.env`
-file is silently ignored. Create `.streamlit/secrets.toml`:
+The app reads `st.secrets`, not `.env`. There is no `python-dotenv`, so a `.env` file is
+ignored. Create `.streamlit/secrets.toml` with these values.
 
 ```toml
 OPENAI_API_KEY = "sk-..."
@@ -91,12 +59,10 @@ MONGODB_LOGS_DATABASE_NAME = "agentic_tutor_logs"
 ADMIN_PASSWORD = "your_admin_password"
 ```
 
-- Replace `<db_password>` placeholder etc.
-- `MONGODB_LOGS_DATABASE_NAME` is the separate database conversation transcripts are
-  written to (`mongodb/logger.py`). It may be the same database as
-  `MONGODB_DATABASE_NAME` if you'd rather keep everything together.
-- `admin.py` and `assessor/openai_assessor.py` read `OPENAI_API_KEY` from the **environment**,
-  not from secrets. Export it too: `$env:OPENAI_API_KEY="sk-..."` (PowerShell).
+- `MONGODB_LOGS_DATABASE_NAME` holds the conversation logs. It can be the same database as
+  `MONGODB_DATABASE_NAME`.
+- `admin.py` and `assessor/openai_assessor.py` read `OPENAI_API_KEY` from the environment, so
+  export it as well. In PowerShell that is `$env:OPENAI_API_KEY="sk-..."`.
 - On Streamlit Community Cloud, paste the same TOML into the app's Secrets settings.
 - Keep `secrets.toml` out of git.
 
@@ -107,247 +73,131 @@ ADMIN_PASSWORD = "your_admin_password"
 .venv/Scripts/python.exe scripts/load_week_json.py --commit   # write
 ```
 
-Reads `knowledge/MCEN_resources_extracted/week_*_assessor_questions.json` and replaces the
-`modules_live` collection. Before writing anything it:
-
-- takes each module's `index` from the **filename** (`week_10_...` -> 10), cross-checking any
-  `index` field in the file, so a missing week leaves a gap rather than shifting every later
-  module down one;
-- validates every file and refuses to load on errors (missing `expected_answer`, duplicate or
-  dotted topic names, two files for one module, ...);
-- diffs against what is live and warns about topics that would disappear or questions that
-  would move — student progress is keyed by topic name and question position;
-- keeps each module's live `vector_store_id` (the files only carry placeholders).
-
-The write goes to a staging collection that is renamed over `modules_live`, so a failed load
-leaves the live modules untouched.
+This reads `knowledge/MCEN_resources_extracted/week_*_assessor_questions.json` and replaces the
+`modules_live` collection. The preview checks every file and warns about any change that would
+detach students' existing progress.
 
 ### 4. Build the vector stores
 
 ```bash
 .venv/Scripts/python.exe scripts/setup_vector_stores.py            # preview
-.venv/Scripts/python.exe scripts/setup_vector_stores.py --commit   # create + upload
+.venv/Scripts/python.exe scripts/setup_vector_stores.py --commit   # create and upload
 ```
 
-Creates one OpenAI vector store per module that doesn't have a live one, uploads that module's
-source files, and writes the real store id back to the module. Files it can't assign to a
-module, and files whose names look like answers (`solution`, `answer`, `marking`, `rubric`),
-are listed and not uploaded. `--name-prefix PRQ` sets the store names shown in the OpenAI
-dashboard (default: the database name).
+This creates an OpenAI vector store for each module that doesn't have one yet, uploads that
+module's lecture files and links the store to the module. Pass `--name-prefix PRQ` to set how
+the stores are named in the OpenAI dashboard.
 
-> Until this runs, a module's `vector_store_id` is a placeholder that OpenAI will reject, and
-> **tutor chat fails on every message** for that module. The assessor is unaffected — it does
-> not use retrieval.
+> Tutor chat fails on every message for a module until its store is built. The assessor
+> doesn't use retrieval, so it works either way.
 
 ### 5. Create logins, then run
 
-`PRQ001`–`PRQ003` are seeded automatically **only if the `users` collection is empty**. For a
-real cohort, put a `data/classlist.csv` with an `Email` column in place and run
-`scripts/create_users.py` — it generates a random code per student plus 15 spares, writes
-`data/user_codes.csv`, and creates each student's progress record. Alternatively, use `scripts/generate_and_load_codes.py`
-to generate a random set of codes and load them into the database.
+For a cohort, put a `data/classlist.csv` with an `Email` column in place and run
+`scripts/create_users.py`. It generates a code for each student plus 15 spares, writes them to
+`data/user_codes.csv` and creates each student's progress record. To make a batch of codes
+without a class list, use `scripts/generate_and_load_codes.py`. If the `users` collection is
+empty, `PRQ001` to `PRQ003` are seeded automatically.
 
-Run it *after* step 3: progress records are initialised against whatever modules exist at that
-moment. It has no re-run guard, so running it twice mints a second set of codes.
+Run this after step 3, because progress records are set up for whichever modules exist at the
+time. `create_users.py` has no re-run guard, and running it twice issues a second set of codes.
 
 ```bash
 streamlit run Home.py     # student app
-streamlit run admin.py    # vector stores, module links, users (needs OPENAI_API_KEY in env)
-streamlit run debug.py    # environment sanity checks
+streamlit run admin.py    # vector stores, module links and users (needs OPENAI_API_KEY in env)
+streamlit run debug.py    # environment checks
 ```
 
-Every script above is **dry-run by default** and needs `--commit` to write.
-
----
-
-## Data model
-
-Three MongoDB collections, in the database named by `MONGODB_DATABASE_NAME`.
-
-### `modules_live` — one document per module
-
-```json
-{
-  "title": "Week 1 - Probability, Reliability and Quality",
-  "index": 1,
-  "vector_store_id": "vs_...",
-  "topics": [
-    { "name": "Definition of Reliability", "description": "Explain reliability as ..." }
-  ],
-  "tutorial_questions": [
-    { "question_id": "1.1", "question": "Define product reliability ...", "expected_answer": "..." }
-  ]
-}
-```
-
-- `index` is 1-based and comes from the source filename (`week_4_...` -> 4). The source
-  files' own `index` fields are 0-based; the loader only uses them as a cross-check.
-- `topics[].question` is **optional**. Supply one to control a topic's opening question;
-  omit it and the tutor generates an opener from `description`.
-- `description` (module level) is optional and passed to the tutor.
-- Optional extras the assessor tolerates: `success_criteria`, `agent_context`,
-  `question_image_url`, `answer_image_url`.
-- `tutorial_questions` may be a list or a dict; both are normalised on read.
-
-### `users` — login codes
-
-```json
-{ "login_code": "PRQ001", "created_at": "..." }
-```
-
-### `user_module_progress` — one document per student
-
-Created on first login, keyed by `str(index)`:
-
-```json
-{
-  "user_id": "PRQ001",
-  "modules": {
-    "1": {
-      "progress": 0, "status": "not_started",
-      "last_topic": "Definition of Reliability",
-      "topics":    { "Definition of Reliability": { "progress": 0, "status": "not_started" } },
-      "questions": { "1": { "status": "not_started", "attempts": 0, "competency_level": 0 } }
-    }
-  }
-}
-```
-
-`last_topic` is where the student is up to *by choice*, which competency levels can't express —
-a student who jumped ahead has finished nothing new, but shouldn't be dropped back at the first
-unfinished topic next time they log in. Written on every topic change, read when a module page
-opens, and ignored if the topic no longer exists.
-
-Competency is `0` = not started, `1` = in progress/partial, `2` = completed/full, used
-consistently by the tutor, the assessor, and both prompts.
-
-Modules and questions are keyed by index, but **topic progress is keyed by the topic name**.
-Renaming a topic in `modules_live` therefore orphans every student's progress for it — treat
-topic names as stable identifiers once a cohort has started.
-
-### Conversation logs
-
-A second database, named by `MONGODB_LOGS_DATABASE_NAME`, holds `user_conversations` (every
-tutor turn, keyed by user, module `index` and topic name) and `user_submissions`. It is not
-purely an audit trail: the tutor reads `user_conversations` back on login to restore chat
-history, so the two databases are both live.
-
----
-
-## Course material
-
-**The app never reads `knowledge/` at runtime** (the one exception is `assessor/ui.py`, which
-loads question and answer images from `knowledge/images/`).
-
-Content reaches the tutor only through OpenAI: files are uploaded to a vector store, OpenAI
-chunks and indexes them, and MongoDB stores just the resulting `vector_store_id`, which the
-tutor hands to its `file_search` tool. `knowledge/` is a **staging area**, not a runtime
-dependency — you can reorganise it freely as long as the setup script can find the files.
-
-`knowledge/MCEN_resources_extracted/` holds:
-
-| File | Role |
-|---|---|
-| `L01a`, `L02`, … `L11 … .pdf` | Lecture slide decks — primary vector-store content |
-| `Module {1..11} - <title>.docx` | Competency summaries — supplementary content |
-| `week_{1..11}_assessor_questions.json` | Module definitions — loaded into `modules_live`, **never** uploaded |
-
-> The `week_*.json` files contain `expected_answer` for every tutorial question. Indexing them
-> would let the tutor hand students the model answers, so `setup_vector_stores.py` excludes
-> `.json` by design.
-
-Both scripts map files to modules **by filename** (`utils/course_files.py`): `L02 ...pdf`,
-`Module 2 ...docx` and `week_2_....json` all resolve to module 2. The number has to lead the
-name, after one of `L`/`Lec`/`Lecture`, `M`/`Mod`/`Module`, `W`/`Wk`/`Week`, `Topic`, `Unit`,
-`Ch`/`Chapter` (any case, `_`/`-`/space separators, leading zeros fine). A file with no number
-of its own takes its folder's, so `week_04/slides.pdf` also works. Indexable types are PDF,
-DOCX/DOC, PPTX, TXT, MD, HTML and TEX. Adding a new week means dropping its files in — no
-code change.
-
----
+Every script in `scripts/` is a dry run by default and only writes with `--commit`.
 
 ## Adapting to another subject
 
-The app has no subject-specific logic. To repoint it:
+Use a new `MONGODB_DATABASE_NAME` for each subject. The loader keeps whichever vector store is
+already linked to a module number, so reusing a database would leave the old subject's lecture
+material attached.
 
-1. **Module data.** Produce one JSON per module in the shape above, named so the module number
-   leads (`week_4_....json`), and load it with `scripts/load_week_json.py` — `--data-dir` and
-   `--glob` point it at other names or locations. The required fields are `title`, `topics`
-   (each with a `name`), and `tutorial_questions` (each with `question` and `expected_answer`);
-   the dry run reports anything missing, and any extra fields it would drop. Titles can follow
-   any convention — nothing matches on them. Use a fresh `MONGODB_DATABASE_NAME` for a new
-   subject: the loader keeps whichever vector store is already live for each module number.
-2. **Course material.** Put each module's files in the source directory (or a per-week
-   subfolder), named so the module number is at the start (`L04 ...`, `Module 4 - ...`,
-   `week_04/...`), then run `scripts/setup_vector_stores.py`. Keep worked solutions out of it.
+1. **Module data.** Write one JSON file per module with the module number at the start of the
+   filename, e.g. `week_4_questions.json`. Load them with `scripts/load_week_json.py`, adding
+   `--data-dir` and `--glob` if they live somewhere else or are named differently.
+
+   ```json
+   {
+     "title": "Week 1 - Probability, Reliability and Quality",
+     "topics": [
+       { "name": "Definition of Reliability", "description": "Explain reliability as ..." }
+     ],
+     "tutorial_questions": [
+       { "question_id": "1.1", "question": "Define product reliability ...", "expected_answer": "..." }
+     ]
+   }
+   ```
+
+   Every topic needs a `name`, and every question needs `question` and `expected_answer`. The
+   tutor writes each topic's opening question from its `description`, or uses the topic's
+   `question` field if you supply one. The assessor also accepts `question_image_url` and
+   `answer_image_url` on a question. Titles can follow any convention.
+
+   Progress is stored against topic names and question positions. Once students have started,
+   don't rename topics or reorder questions. The preview warns you if a load would do either.
+
+2. **Course material.** Put each module's lecture files in the source folder with the module
+   number at the start of the name (`L04 ...`, `Module 4 - ...`), or in a folder per week such
+   as `week_04/`. The accepted prefixes and file types are listed in `utils/course_files.py`.
+   Then run `scripts/setup_vector_stores.py`. Keep worked solutions out of the folder, because
+   the tutor can quote anything in its vector store. The module JSON files are never uploaded
+   since they contain the expected answers.
+
 3. **Prompts.** Edit `prompts/tutor.md` and `prompts/assessor.md`. Keep the
-   `update_topic_competency(level, reason)` tool contract and the 0/1/2 scale — the code depends
-   on both. The tool deliberately takes no topic argument: the app supplies the current topic.
-   Don't reintroduce one, and don't let the prompt announce that a topic is finished — moving on
-   is the app's decision, taken only after the write succeeds.
-4. **Pages.** Add or remove `pages/N_Module_X.py`. Each is a single call,
-   `render_module_page(module_id="4", release_date=datetime(...))` (`utils/pages.py`); copy one
-   and change the number and unlock date (omit `release_date` for no lock). The file's numeric
-   prefix controls sidebar order — renumber `N_Assessor.py` to stay last; the app finds it by
-   name, so nothing else changes. Don't give a page its own `@st.cache_data` copy of the module
-   lookup (see the note under Notes and limitations).
-5. **Branding.** The title in `Home.py` and the "About the AI Tutor" text in
+   `update_topic_competency(level, reason)` tool and the 0/1/2 scale, because the code depends
+   on both. The tool has no topic argument on purpose, since the app supplies the current
+   topic. Don't let the prompt announce that a topic is finished either. The app moves on only
+   after the competency write succeeds.
+
+4. **Pages.** Each module page in `pages/` is one call to `render_module_page`.
+
+   ```python
+   render_module_page(module_id="4", release_date=datetime(2026, 8, 15, 23, 59))
+   ```
+
+   Copy a page and change the module number and unlock date, or leave out `release_date` for
+   no lock. The number at the start of the filename sets the sidebar order, so renumber
+   `N_Assessor.py` to keep it last. A page whose module isn't loaded yet says so, which means
+   you can add pages ahead of the content.
+
+5. **Branding.** Change the title in `Home.py` and the "About the AI Tutor" text in
    `utils/tutor/interface.py`.
 
-A module page whose data hasn't been loaded shows "not available yet" rather than an error, so
-you can add pages ahead of content.
+## Notes
 
----
+- Changing page while an answer is being graded abandons the request and loses the answer. The
+  assessor page warns students about this.
+- Removing a module leaves each student's progress record for it behind. Clear those with
+  `scripts/cleanup_orphan_progress.py`.
+- Login codes are the only credential, and each one is also the student's `user_id`. Anyone
+  with another student's code can see and change that student's progress.
+- `ADMIN_PASSWORD` stops accidental clicks in `admin.py`. It isn't a security measure.
 
-## Notes and limitations
+## Known issues
 
-- **Don't navigate mid-assessment.** Changing page while an answer is being graded abandons the
-  request and loses the answer. The assessor page warns about this; it is not yet handled
-  gracefully.
-- **Page loads are slow.** Each interaction re-queries MongoDB and re-renders. `get_module_data`
-  is cached for 5 minutes to compensate, and is explicitly cleared after a submission so results
-  aren't stale.
-- **Never give a page its own `@st.cache_data` copy of a shared lookup.** Streamlit keys a cached
-  function by `__module__`, `__qualname__` and its source text, and *every page script runs as
-  `__main__`* — so identical zero-argument helpers in two pages silently share one cache entry.
-  That is how each module page ended up rendering another module's title and vector store id.
-  Cache once, somewhere importable, keyed by an argument.
-- **`admin.py` requires an admin password in `.streamlit/secrets.toml`**. It is not a security measure, just a guard against
-  accidental clicks.
-- **`admin.py` links vector stores to modules by title**, the one remaining title-keyed write.
-  It works because the title comes from the same document, but `setup_vector_stores.py` links
-  by `index` and is the safer path.
-- **Orphaned progress**: if you remove a module, students keep a progress record for it. Clear
-  those with `scripts/cleanup_orphan_progress.py`.
-- **Login codes are the only credential.** They double as the student's `user_id`, so anyone
-  with another student's code has that student's progress. Fine as a class convenience; don't
-  mistake it for authentication.
-
-## Known issues and future work
-
-`next_steps.md` is the working backlog — a prioritised list of known issues, deferred cleanups
-and open questions, each naming the file it lives in. Work from the top; when an item is done,
-append it to `build_log.md` and remove it from `next_steps.md`.
-
-Read it before starting on this repo. Several entries describe deliberate decisions rather than
-bugs (historical progress data left unrepaired, for instance), and knowing which is which saves
-re-diagnosing something already understood.
+`next_steps.md` is the working backlog. Read it before starting work, because several entries
+record deliberate decisions rather than bugs. When an item is done, add it to `build_log.md` and
+remove it from `next_steps.md`.
 
 ## Repository layout
 
 | Path | Purpose |
 |---|---|
-| `Home.py` | Entry point — login |
+| `Home.py` | Entry point and login |
 | `pages/` | Progress page, module pages, assessor |
-| `utils/tutor/` | Tutor chat: prompt assembly, streaming, competency tool calls, topic advance |
+| `utils/tutor/` | Tutor chat, prompt assembly, competency tool calls, topic changes |
 | `utils/modules.py` | Module lookup by `index` |
-| `utils/pages.py` | Body of every module page; locates the assessor page |
-| `utils/course_files.py` | Filename -> module number rules shared by the setup scripts |
-| `utils/status.py` | The 0/1/2 scale's on-screen form — one definition, shared by every page |
-| `assessor/` | Answer submission, OpenAI grading, results UI |
+| `utils/pages.py` | Shared body of every module page, and the assessor page lookup |
+| `utils/course_files.py` | Rules for matching source files to module numbers |
+| `utils/status.py` | How the 0/1/2 scale is shown on screen, shared by every page |
+| `assessor/` | Answer submission, grading, results UI |
 | `mongodb/connectors/` | All database access |
-| `mongodb/logger.py` | Conversation and submission transcripts (separate logs database) |
+| `mongodb/logger.py` | Conversation and submission logs (separate database) |
 | `prompts/` | Tutor and assessor system prompts |
-| `scripts/` | Setup and maintenance utilities |
-| `knowledge/` | Source course material (staging for vector stores) |
-| `docs/` | Design notes — voice tutor plan, draft topic questions |
+| `scripts/` | Setup and maintenance scripts |
+| `knowledge/` | Source course material, staged for the vector stores |
+| `docs/` | Architecture notes, voice tutor plan, draft topic questions |
