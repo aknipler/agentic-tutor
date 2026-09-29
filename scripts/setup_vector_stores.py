@@ -11,12 +11,20 @@ For each module found in `modules_live` it:
   4. writes the real vector store id back to the module document
 
 Which file belongs to which module is *derived from the filename*, not hard-coded:
-`L01a ....pdf` and `Module 1 - ....docx` both resolve to module index 1. Dropping
-week 4's files into the directory is therefore all that is needed to extend this.
+`L01a ....pdf` and `Module 1 - ....docx` both resolve to module index 1, and a file
+with no number of its own takes it from its folder (`week_04/slides.pdf`). The rules
+live in utils/course_files.py, shared with load_week_json.py. Dropping a new week's
+files into the directory is therefore all that is needed to extend this. Files that
+can't be placed are listed rather than silently skipped.
 
 Modules are matched on `index` (see utils/modules.py) - never on title.
 
-IMPORTANT: only files under knowledge/MCEN_resources_extracted/ are considered.
+Files whose names look like answers ("Tutorial 3 Solutions.pdf", "marking guide")
+are left out unless --include-answer-files is passed: the tutor retrieves from these
+stores and would hand the answers to students.
+
+IMPORTANT: only files under --data-dir (default knowledge/MCEN_resources_extracted/)
+are considered.
 
 Safety: creating stores and uploading files bills your OpenAI account and is not
 undone by re-running. Runs as a DRY RUN by default; pass --commit to act.
@@ -29,7 +37,6 @@ Usage:
 
 import argparse
 import os
-import re
 import sys
 from pathlib import Path
 
@@ -40,6 +47,7 @@ import streamlit as st
 from openai import OpenAI
 
 from mongodb.connectors.base import get_mongo_client
+from utils.course_files import looks_like_answers, module_index_for_path
 from utils.modules import module_index, sort_modules_by_index
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "knowledge" / "MCEN_resources_extracted"
@@ -47,37 +55,30 @@ COLLECTION = "modules_live"
 # Deliberately excludes .json: the week_*_assessor_questions.json files in this
 # same directory carry `expected_answer` for every tutorial question. Indexing
 # them would let the tutor retrieve and hand students the model answers.
-SOURCE_SUFFIXES = {".pdf", ".docx", ".txt", ".md"}
-
-# "L01a Quality Reliability v10.pdf" -> 1, "Module 2 - Inspections.docx" -> 2.
-# Anchored at the start so a trailing "v10" can never be mistaken for an index.
-_INDEX_PATTERNS = (
-    re.compile(r"^L0*(\d+)", re.IGNORECASE),
-    re.compile(r"^Module\s+0*(\d+)", re.IGNORECASE),
-    re.compile(r"^week[_\s]*0*(\d+)", re.IGNORECASE),
-)
+# Everything else here is a format OpenAI's file_search can index.
+SOURCE_SUFFIXES = {".pdf", ".docx", ".doc", ".pptx", ".txt", ".md", ".html", ".tex"}
 
 
-def infer_module_index(filename: str):
-    """Derive a module index from a source filename, or None if it has no marker."""
-    for pattern in _INDEX_PATTERNS:
-        match = pattern.match(filename)
-        if match:
-            return int(match.group(1))
-    return None
+def collect_source_files(data_dir: Path, include_answer_files: bool = False):
+    """Sort every file under data_dir into its module.
 
-
-def collect_source_files(data_dir: Path):
-    """Map module index -> sorted list of source files for that module."""
-    grouped = {}
-    for path in sorted(data_dir.iterdir()):
-        if not path.is_file() or path.suffix.lower() not in SOURCE_SUFFIXES:
+    Returns (grouped, unplaced, answers): {index: [paths]}, files of an indexable
+    type with no module number, and files held back because their names look like
+    answers. Searches subfolders, so material can be organised per week.
+    """
+    grouped, unplaced, answers = {}, [], []
+    for path in sorted(p for p in data_dir.rglob("*") if p.is_file()):
+        if path.suffix.lower() not in SOURCE_SUFFIXES:
             continue
-        index = infer_module_index(path.name)
+        if looks_like_answers(path) and not include_answer_files:
+            answers.append(path)
+            continue
+        index = module_index_for_path(path, data_dir)
         if index is None:
+            unplaced.append(path)
             continue
         grouped.setdefault(index, []).append(path)
-    return grouped
+    return grouped, unplaced, answers
 
 
 def store_exists(client: OpenAI, vector_store_id: str) -> bool:
@@ -113,9 +114,14 @@ def main() -> None:
                         help="Rebuild a store even if the module already links to a real one.")
     parser.add_argument("--data-dir", type=Path, default=DATA_DIR,
                         help=f"Directory holding the module source files (default: {DATA_DIR}).")
+    parser.add_argument("--include-answer-files", action="store_true",
+                        help="Upload files whose names look like solutions/answers/marking guides too.")
+    parser.add_argument("--name-prefix", default=None,
+                        help="Prefix for new store names in the OpenAI dashboard (default: the database name).")
     args = parser.parse_args()
 
     db_name = st.secrets["MONGODB_DATABASE_NAME"]
+    name_prefix = args.name_prefix if args.name_prefix is not None else db_name
 
     mongo = get_mongo_client()
     collection = mongo[db_name][COLLECTION]
@@ -125,13 +131,23 @@ def main() -> None:
             f"No modules in {db_name}.{COLLECTION}. Run scripts/load_week_json.py --commit first."
         )
 
-    grouped = collect_source_files(args.data_dir)
+    grouped, unplaced, answers = collect_source_files(args.data_dir, args.include_answer_files)
     client = get_openai_client()
 
     mode = "COMMIT" if args.commit else "DRY RUN"
     print(f"[{mode}] database    : {db_name!r}")
     print(f"[{mode}] source dir  : {args.data_dir}")
     print(f"[{mode}] modules     : {len(modules)}")
+    for path in answers:
+        print(f"[{mode}] [held back] {path.relative_to(args.data_dir)} - name looks like answers "
+              "(--include-answer-files to upload)")
+    for path in unplaced:
+        print(f"[{mode}] [warn] {path.relative_to(args.data_dir)} - no module number in its name or "
+              "folder, not uploaded (see utils/course_files.py)")
+    module_indexes = {module_index(module) for module in modules}
+    for index in sorted(set(grouped) - module_indexes):
+        names = ", ".join(p.name for p in grouped[index])
+        print(f"[{mode}] [warn] files for module {index} but no such module is loaded: {names}")
 
     planned = []
     for module in modules:
@@ -150,7 +166,7 @@ def main() -> None:
             continue
 
         for path in files:
-            print(f"    file: {path.name}  ({path.stat().st_size / 1_048_576:.1f} MB)")
+            print(f"    file: {path.relative_to(args.data_dir)}  ({path.stat().st_size / 1_048_576:.1f} MB)")
 
         if linked and not args.force:
             print("    [skip] already linked to a live store (use --force to rebuild)")
@@ -169,7 +185,7 @@ def main() -> None:
         return
 
     for module, index, title, files in planned:
-        store_name = f"PRQ {title}"
+        store_name = f"{name_prefix} {title}".strip()
         print(f"\n[COMMIT] Creating vector store {store_name!r} ...")
         store = client.vector_stores.create(
             name=store_name,

@@ -1,0 +1,202 @@
+{
+    "_id": {
+        "$oid": "c1024b8536a24210aa9384da"
+    },
+    "title": "Week 11 - SPC and Supplier Quality",
+    "topics": [
+        {
+            "name": "Keeping Processes in Control",
+            "description": "Use control plans, mistake proofing, design or equipment changes, training, and measurement strategies to maintain process control."
+        },
+        {
+            "name": "Statistical Process Control",
+            "description": "Use SPC to distinguish normal variation from special causes and assess whether process behaviour remains statistically stable over time."
+        },
+        {
+            "name": "Control Limits and Specification Limits",
+            "description": "Distinguish process control limits from product specification limits and interpret three-sigma process-control boundaries."
+        },
+        {
+            "name": "X-bar and R Charts",
+            "description": "Monitor subgroup means and within-subgroup ranges for continuous process measurements."
+        },
+        {
+            "name": "Sampling Frequency and Sample Size",
+            "description": "Select rational subgroup timing and sample size so changes can be detected while measurements remain representative."
+        },
+        {
+            "name": "Out-of-Control Action Plans",
+            "description": "Link each SPC chart to an OCAP defining the response when an out-of-control condition is detected."
+        },
+        {
+            "name": "Incoming Inspection Sampling Plans",
+            "description": "Use sample-based lot sentencing instead of 100% inspection where appropriate."
+        },
+        {
+            "name": "Operating Characteristic Curves",
+            "description": "Interpret probability of lot acceptance as a function of incoming defective rate."
+        },
+        {
+            "name": "AQL, LTPD, Producer Risk and Consumer Risk",
+            "description": "Define good and bad lot quality thresholds and associated alpha and beta risks."
+        },
+        {
+            "name": "Single Sampling Plan Design",
+            "description": "Describe a single sampling plan using sample size n and acceptance number c and obtain them from AQL, LTPD, alpha, and beta."
+        },
+        {
+            "name": "Cpk Inspection Plans",
+            "description": "Sentence lots using process capability as an alternative to purely pass-fail acceptance sampling."
+        },
+        {
+            "name": "Production Part Assurance Process",
+            "description": "Recognise the supplier-quality evidence required by PPAP, including FMEAs, process flow, control plans, capability, MSA, dimensional reporting, and verification testing."
+        }
+    ],
+    "tutorial_questions": [
+        {
+            "question_id": "11.1",
+            "question": "What is the purpose of a process control plan?",
+            "expected_answer": "A control plan identifies important process output and input variables, how they will be monitored, and what actions must be taken when those variables become out of control."
+        },
+        {
+            "question_id": "11.2",
+            "question": "Rank the following process-control approaches qualitatively from generally more reliable to less reliable: mistake proofing, design/equipment changes, operator training, and additional inspection.",
+            "expected_answer": "Mistake proofing and permanent design or equipment changes are generally more reliable because they prevent the error or remove its cause. Operator training and added measurement or inspection are generally less reliable because they depend more on continued human execution, although they are often cheaper and easier to implement."
+        },
+        {
+            "question_id": "11.3",
+            "question": "Define Statistical Process Control and state its main purpose.",
+            "expected_answer": "SPC is a statistical method for evaluating the stability of process and product variables over time. Its purpose is to detect meaningful process changes or special causes so the process can be returned to stable, expected behaviour."
+        },
+        {
+            "question_id": "11.4",
+            "question": "What does it mean for a process to be in statistical control?",
+            "expected_answer": "The process is in statistical control when its short-term distribution parameters remain stable over time and the data do not show non-random patterns indicating special-cause variation."
+        },
+        {
+            "question_id": "11.5",
+            "question": "Explain the difference between process control limits and product specification limits.",
+            "expected_answer": "Control limits are calculated from process behaviour and are used to judge statistical stability. Specification limits are engineering or customer requirements defining acceptable product performance. A process may be statistically stable yet still produce out-of-specification product, or may meet specifications temporarily while being statistically unstable."
+        },
+        {
+            "question_id": "11.6",
+            "question": "Where are SPC process control limits commonly placed relative to the process mean according to the lecture?",
+            "expected_answer": "They are commonly placed approximately three standard deviations above and below the process mean, subject to the specific control-chart construction being used."
+        },
+        {
+            "question_id": "11.7",
+            "question": "What does an X-bar chart monitor and how is its centreline determined?",
+            "expected_answer": "An X-bar chart monitors subgroup means over time. Its centreline is the mean of the subgroup means."
+        },
+        {
+            "question_id": "11.8",
+            "question": "What does an R chart monitor?",
+            "expected_answer": "An R chart monitors within-subgroup variability over time using the range of each subgroup, with the chart centred on the average range."
+        },
+        {
+            "question_id": "11.9",
+            "question": "Why should the X-bar and R charts be interpreted together?",
+            "expected_answer": "The X-bar chart detects changes in process location or mean, while the R chart detects changes in within-subgroup variability. A meaningful assessment of process stability requires checking both centre and spread."
+        },
+        {
+            "question_id": "11.10",
+            "question": "How should SPC sampling frequency be selected?",
+            "expected_answer": "Sampling frequency should correspond to a rational process breakpoint or time interval, such as each hour or each shift, so subgroups can reveal changes associated with how the process actually operates."
+        },
+        {
+            "question_id": "11.11",
+            "question": "Why is subgroup sample size an important SPC design choice?",
+            "expected_answer": "The subgroup must be large enough to represent the process but not so large that changes are averaged away or monitoring becomes unnecessarily expensive. Sample size also affects the probability of detecting a shift."
+        },
+        {
+            "question_id": "11.12",
+            "question": "A chart signal has a 65% probability of detecting a particular mean shift. What is the probability that the signal is not due to that real shift and instead arises from ordinary sampling behaviour in the lecture's simplified interpretation?",
+            "expected_answer": "35%, because 1 - 0.65 = 0.35."
+        },
+        {
+            "question_id": "11.13",
+            "question": "What is an Out-of-Control Action Plan, and why should it be linked to every SPC chart?",
+            "expected_answer": "An OCAP is a documented set of actions to investigate and restore the process when the chart indicates an out-of-control condition. Linking it to the chart ensures that a signal leads to a defined response rather than only being recorded."
+        },
+        {
+            "question_id": "11.14",
+            "question": "Why can sample-based incoming inspection be preferable to 100% inspection?",
+            "expected_answer": "100% inspection can be expensive and may be unnecessary for non-safety-critical parts. Sampling can reduce cost and is especially useful when tests are destructive, when lot risks are managed statistically, or when measurement error would otherwise reject many good parts."
+        },
+        {
+            "question_id": "11.15",
+            "question": "Define a single acceptance sampling plan using n and c.",
+            "expected_answer": "n is the number of units randomly sampled from the lot. c is the acceptance number, meaning the maximum number of defectives allowed in the sample for the lot to be accepted."
+        },
+        {
+            "question_id": "11.16",
+            "question": "What does an operating characteristic curve show?",
+            "expected_answer": "An OC curve plots the probability of accepting a lot against the true incoming defective fraction or percent defective. It shows how well a sampling plan discriminates between good and bad lots."
+        },
+        {
+            "question_id": "11.17",
+            "question": "How do increasing sample size n and changing acceptance number c affect the discriminatory power of an OC curve?",
+            "expected_answer": "A larger sample generally makes the OC curve steeper and improves discrimination between good and bad lots. The acceptance number shifts how tolerant the plan is to observed defectives. The ideal step-like OC curve can only be reached by perfect 100% inspection, but larger samples can approximate it more closely."
+        },
+        {
+            "question_id": "11.18",
+            "question": "Define AQL and LTPD.",
+            "expected_answer": "AQL is the highest incoming defective rate still considered acceptable, with high probability of lot acceptance. LTPD is the lowest defective rate considered sufficiently bad that the lot should have a high probability of rejection."
+        },
+        {
+            "question_id": "11.19",
+            "question": "At the AQL, how are alpha and probability of acceptance related?",
+            "expected_answer": "At p = AQL, the probability of lot acceptance is 1 - alpha. Alpha is the producer's risk of rejecting a lot that is at the acceptable quality level."
+        },
+        {
+            "question_id": "11.20",
+            "question": "At the LTPD, how are beta and probability of acceptance related?",
+            "expected_answer": "At p = LTPD, the probability of lot acceptance is beta. Beta is the consumer's risk of accepting a lot that is at the rejectable quality level."
+        },
+        {
+            "question_id": "11.21",
+            "question": "A sampling plan uses alpha = 0.05. What acceptance probability is required at the AQL?",
+            "expected_answer": "The required acceptance probability is 1 - alpha = 0.95, or 95%."
+        },
+        {
+            "question_id": "11.22",
+            "question": "A sampling plan uses beta = 0.10. What acceptance probability is permitted at the LTPD?",
+            "expected_answer": "The lot acceptance probability at the LTPD is beta = 0.10, or 10%."
+        },
+        {
+            "question_id": "11.23",
+            "question": "What four quantities must be specified before using the binomial nomograph to design a single sampling plan?",
+            "expected_answer": "The Acceptable Quality Level (AQL), Lot Tolerance Percent Defective (LTPD), producer risk alpha, and consumer risk beta. These are used to obtain the sample size n and acceptance number c."
+        },
+        {
+            "question_id": "11.24",
+            "question": "Why can a Cpk-based inspection plan be preferable to a purely pass-fail OC-curve plan?",
+            "expected_answer": "A pass-fail plan uses only whether sampled units conform. A Cpk-based plan uses continuous process-capability information and can sentence the lot based on whether the process capability is adequate, potentially using more information about the underlying process."
+        },
+        {
+            "question_id": "11.25",
+            "question": "In a Cpk inspection plan, what are CAQL and CLTPD conceptually?",
+            "expected_answer": "CAQL is the maximum rejectable Cpk value defined with alpha risk, and CLTPD is the minimum acceptable Cpk value defined with beta risk. Together with alpha and beta they can be used to determine a Cpk-based sampling plan."
+        },
+        {
+            "question_id": "11.26",
+            "question": "What is PPAP intended to demonstrate about a supplier?",
+            "expected_answer": "PPAP is a supplier-quality assurance process specifying evidence that a supplier must demonstrate to show that its product and production process are understood, controlled, measurable, and capable of consistently meeting requirements."
+        },
+        {
+            "question_id": "11.27",
+            "question": "List the PPAP elements identified in the competency list.",
+            "expected_answer": "Design FMEA, Process Flow, Process FMEA, Process Control Plan, Process Readiness Study, Initial Process Capability Studies, Measurement Systems Analysis, Dimensional Report, and Production Verification Testing."
+        },
+        {
+            "question_id": "11.28",
+            "question": "Why are both Measurement Systems Analysis and Initial Process Capability Studies important in supplier quality assurance?",
+            "expected_answer": "Measurement Systems Analysis establishes whether the measurement process is capable of producing trustworthy data. Initial Process Capability Studies then use reliable measurements to assess whether the production process can consistently meet specification requirements."
+        }
+    ],
+    "vector_store_id": "vs_week11_spc_supplier_quality",
+    "index": {
+        "$numberInt": "10"
+    }
+}

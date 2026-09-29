@@ -38,6 +38,7 @@ from mongodb.connectors import get_modules_data, get_user_progress, update_compe
 from mongodb.logger import UserLogger
 from utils.cache import get_cached_modules_data, invalidate_modules_cache
 from utils.modules import find_module_by_index
+from utils.pages import assessor_page
 from assessor.utils import get_status_emoji
 
 # Base URL for the application
@@ -1215,7 +1216,7 @@ def render_tutor_interface(module_id: Union[str, int], module_title: str, module
                                     # Store the module and question IDs in session state
                                     st.session_state.selected_module_id = module_id
                                     st.session_state.selected_question_id = question_id
-                                    st.switch_page("pages/8_Assessor.py")
+                                    st.switch_page(assessor_page())
                             
                             with col2:
                                 st.markdown(question_title)

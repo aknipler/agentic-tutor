@@ -22,7 +22,7 @@ Home.py            login with a code, verified against the `users` collection
   |     |
   |     +-- list of tutorial questions -> "Try Question" -> Assessor
   |
-  +-- pages/8_Assessor.py   submit an answer (text and/or images), get graded 0/1/2 + feedback
+  +-- pages/13_Assessor.py  submit an answer (text and/or images), get graded 0/1/2 + feedback
   |
   +-- pages/1_Your_Progress.py   per-module topic and question status
 ```
@@ -108,7 +108,19 @@ ADMIN_PASSWORD = "your_admin_password"
 ```
 
 Reads `knowledge/MCEN_resources_extracted/week_*_assessor_questions.json` and replaces the
-`modules_live` collection.
+`modules_live` collection. Before writing anything it:
+
+- takes each module's `index` from the **filename** (`week_10_...` -> 10), cross-checking any
+  `index` field in the file, so a missing week leaves a gap rather than shifting every later
+  module down one;
+- validates every file and refuses to load on errors (missing `expected_answer`, duplicate or
+  dotted topic names, two files for one module, ...);
+- diffs against what is live and warns about topics that would disappear or questions that
+  would move — student progress is keyed by topic name and question position;
+- keeps each module's live `vector_store_id` (the files only carry placeholders).
+
+The write goes to a staging collection that is renamed over `modules_live`, so a failed load
+leaves the live modules untouched.
 
 ### 4. Build the vector stores
 
@@ -117,8 +129,11 @@ Reads `knowledge/MCEN_resources_extracted/week_*_assessor_questions.json` and re
 .venv/Scripts/python.exe scripts/setup_vector_stores.py --commit   # create + upload
 ```
 
-Creates one OpenAI vector store per module, uploads that module's source files, and writes the
-real store id back to the module.
+Creates one OpenAI vector store per module that doesn't have a live one, uploads that module's
+source files, and writes the real store id back to the module. Files it can't assign to a
+module, and files whose names look like answers (`solution`, `answer`, `marking`, `rubric`),
+are listed and not uploaded. `--name-prefix PRQ` sets the store names shown in the OpenAI
+dashboard (default: the database name).
 
 > Until this runs, a module's `vector_store_id` is a placeholder that OpenAI will reject, and
 > **tutor chat fails on every message** for that module. The assessor is unaffected — it does
@@ -165,9 +180,11 @@ Three MongoDB collections, in the database named by `MONGODB_DATABASE_NAME`.
 }
 ```
 
-- `index` is 1-based. Source files are 0-based; the loader renumbers them.
+- `index` is 1-based and comes from the source filename (`week_4_...` -> 4). The source
+  files' own `index` fields are 0-based; the loader only uses them as a cross-check.
 - `topics[].question` is **optional**. Supply one to control a topic's opening question;
   omit it and the tutor generates an opener from `description`.
+- `description` (module level) is optional and passed to the tutor.
 - Optional extras the assessor tolerates: `success_criteria`, `agent_context`,
   `question_image_url`, `answer_image_url`.
 - `tutorial_questions` may be a list or a dict; both are normalised on read.
@@ -231,17 +248,21 @@ dependency — you can reorganise it freely as long as the setup script can find
 
 | File | Role |
 |---|---|
-| `L01a`, `L02`, `L03 … .pdf` | Lecture slide decks — primary vector-store content |
-| `Module {1,2,3} - <title>.docx` | Competency summaries — supplementary content |
-| `week_{1,2,3}_assessor_questions.json` | Module definitions — loaded into `modules_live`, **never** uploaded |
+| `L01a`, `L02`, … `L11 … .pdf` | Lecture slide decks — primary vector-store content |
+| `Module {1..11} - <title>.docx` | Competency summaries — supplementary content |
+| `week_{1..11}_assessor_questions.json` | Module definitions — loaded into `modules_live`, **never** uploaded |
 
 > The `week_*.json` files contain `expected_answer` for every tutorial question. Indexing them
 > would let the tutor hand students the model answers, so `setup_vector_stores.py` excludes
 > `.json` by design.
 
-`setup_vector_stores.py` maps files to modules **by filename**: `L02 ...pdf`, `Module 2 ...docx`
-and `week_2_....json` all resolve to module 2. Adding a new week means dropping its files in —
-no code change.
+Both scripts map files to modules **by filename** (`utils/course_files.py`): `L02 ...pdf`,
+`Module 2 ...docx` and `week_2_....json` all resolve to module 2. The number has to lead the
+name, after one of `L`/`Lec`/`Lecture`, `M`/`Mod`/`Module`, `W`/`Wk`/`Week`, `Topic`, `Unit`,
+`Ch`/`Chapter` (any case, `_`/`-`/space separators, leading zeros fine). A file with no number
+of its own takes its folder's, so `week_04/slides.pdf` also works. Indexable types are PDF,
+DOCX/DOC, PPTX, TXT, MD, HTML and TEX. Adding a new week means dropping its files in — no
+code change.
 
 ---
 
@@ -249,22 +270,27 @@ no code change.
 
 The app has no subject-specific logic. To repoint it:
 
-1. **Module data.** Produce one JSON per module in the shape above and load it with
-   `scripts/load_week_json.py`. The only required fields are `title`, `index`, `topics`, and
-   `tutorial_questions`. Titles can follow any convention — nothing matches on them.
-2. **Course material.** Put each module's PDFs/DOCX in the source directory, named so the
-   module number is at the start (`L04 ...`, `Module 4 - ...`), then run
-   `scripts/setup_vector_stores.py`.
+1. **Module data.** Produce one JSON per module in the shape above, named so the module number
+   leads (`week_4_....json`), and load it with `scripts/load_week_json.py` — `--data-dir` and
+   `--glob` point it at other names or locations. The required fields are `title`, `topics`
+   (each with a `name`), and `tutorial_questions` (each with `question` and `expected_answer`);
+   the dry run reports anything missing, and any extra fields it would drop. Titles can follow
+   any convention — nothing matches on them. Use a fresh `MONGODB_DATABASE_NAME` for a new
+   subject: the loader keeps whichever vector store is already live for each module number.
+2. **Course material.** Put each module's files in the source directory (or a per-week
+   subfolder), named so the module number is at the start (`L04 ...`, `Module 4 - ...`,
+   `week_04/...`), then run `scripts/setup_vector_stores.py`. Keep worked solutions out of it.
 3. **Prompts.** Edit `prompts/tutor.md` and `prompts/assessor.md`. Keep the
    `update_topic_competency(level, reason)` tool contract and the 0/1/2 scale — the code depends
    on both. The tool deliberately takes no topic argument: the app supplies the current topic.
    Don't reintroduce one, and don't let the prompt announce that a topic is finished — moving on
    is the app's decision, taken only after the write succeeds.
-4. **Pages.** Add or remove `pages/N_Module_X.py`. Each is a ~40-line shim whose only
-   subject-specific line is `MODULE_ID = "4"`; copy one and change that number. The file's
-   numeric prefix controls sidebar order. Load the module document with
-   `get_cached_module(MODULE_ID)` from `utils/cache.py` — don't give the page its own
-   `@st.cache_data` copy of that lookup (see the note under Notes and limitations).
+4. **Pages.** Add or remove `pages/N_Module_X.py`. Each is a single call,
+   `render_module_page(module_id="4", release_date=datetime(...))` (`utils/pages.py`); copy one
+   and change the number and unlock date (omit `release_date` for no lock). The file's numeric
+   prefix controls sidebar order — renumber `N_Assessor.py` to stay last; the app finds it by
+   name, so nothing else changes. Don't give a page its own `@st.cache_data` copy of the module
+   lookup (see the note under Notes and limitations).
 5. **Branding.** The title in `Home.py` and the "About the AI Tutor" text in
    `utils/tutor/interface.py`.
 
@@ -315,6 +341,8 @@ re-diagnosing something already understood.
 | `pages/` | Progress page, module pages, assessor |
 | `utils/tutor/` | Tutor chat: prompt assembly, streaming, competency tool calls, topic advance |
 | `utils/modules.py` | Module lookup by `index` |
+| `utils/pages.py` | Body of every module page; locates the assessor page |
+| `utils/course_files.py` | Filename -> module number rules shared by the setup scripts |
 | `utils/status.py` | The 0/1/2 scale's on-screen form — one definition, shared by every page |
 | `assessor/` | Answer submission, OpenAI grading, results UI |
 | `mongodb/connectors/` | All database access |
