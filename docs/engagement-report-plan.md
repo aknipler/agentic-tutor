@@ -56,8 +56,10 @@ store UTC, so without this a 9 am Tuesday session would count as Monday. Weeks s
 and are labelled by that date. Progress records use `datetime.now()` on the server. Before
 relying on them, confirm the server runs on UTC. To check, compare a submission's log timestamp
 with the `last_attempt` on the same question. They should match to within a few seconds. The
-code reads progress times as UTC by default. If the check fails, set `progress_timezone` in
-`Settings` to the server's zone.
+code reads progress times as UTC by default. If the check fails, run the script with
+`--progress-timezone` set to the server's zone. The script runs this check itself and also
+warns about any activity dated after the report date. A progress record written by a developer's
+machine in another zone does this.
 
 **Interaction.**
 
@@ -255,9 +257,13 @@ recognise their own.
 
 ## Build order
 
-Steps 1 to 3 are written and tested locally. `utils/engagement.py` and its tests are in place and
-the logger timestamps new tutor pairs. The logging change still needs to ship to the live app,
-and step 1's last check (new pairs in the live log have three elements) waits on that.
+All six steps are written and tested locally. The logger timestamps new tutor pairs,
+`utils/engagement.py` and `utils/engagement_workbook.py` do the work, and
+`scripts/engagement_report.py` runs it. The logging change still needs to ship to the live app,
+and step 1's last check (new pairs in the live log have three elements) waits on that. Until it
+ships, every tutor message is undated. Tutor sessions all read 0, tutor active days are lower
+bounds, and most students carry the "tutor timing incomplete" flag. Run the report again once
+the change has been live for a while.
 
 1. Make the logging change.
 2. Write `utils/engagement.py`. Use pure functions that take plain records (tutor pairs with or
@@ -280,6 +286,9 @@ and step 1's last check (new pairs in the live log have three elements) waits on
    - `--session-gap` and `--shrink-k`, with defaults of 30 minutes and 5.
    - `--min-weeks` and `--min-interactions`, which set the starting values of the Prize 2
      threshold cells, with defaults of 3 and 10.
+   - `--progress-timezone`, for the clock check below, with a default of UTC.
+   - `--report-date`, so a rerun can report as of an earlier Melbourne date.
+   - `--validation-notes`, a text file of the hand-check results to copy to the About sheet.
 5. Have the workbook include About, Students, Weekly, Attempts, Prize 1 and Prize 2 sheets.
    Write each prize sheet's score, rank and eligibility cells as formulas that read its weights
    row and threshold cells. On About, explain how to change weights and thresholds, and record
@@ -294,7 +303,9 @@ a later semester, to get an updated report.
 ## Validation
 
 Complete these checks before the first report goes out, and record the results on the About
-sheet.
+sheet. The script runs the first two checks and the clock check itself and writes their results
+to the About sheet. The others need a person. Put their results in a text file, one per line,
+and pass it with `--validation-notes`.
 
 - Per-student tutor message and assessor submission totals match the admin Data Analysis tab.
   The admin count includes error turns, so add those back before comparing.
@@ -308,6 +319,21 @@ sheet.
 - Open the workbook in Excel and in LibreOffice. For the two traced students, check score and
   rank against a hand calculation under the starting weights. Repeat after changing a weight,
   after setting a weight to 0 and after changing a threshold.
+
+### First run, 17 October 2026
+
+- Totals matched the admin tab for all 124 users with a record.
+- Attempts differed on 8 of about 1,400 student-question pairs. In each one the log had one more
+  attempt than the progress record. PRQ001 to PRQ003 have no progress record, so their
+  submissions weren't compared. The cause of the 8 isn't known. The report uses the log.
+- The progress clock matched the log on every question but one. That one is a record on the
+  test account written by a Melbourne machine, and it also set off the future-date warning.
+- The first 50 messages gave 8 real questions among 11 flagged. Two more samples, of 50 and
+  200, brought it to 64 of 77 (83%), so the word list stays. A tighter rule did no better on the
+  200.
+- Two traced students matched by hand. In Excel, every score, rank and eligibility result
+  matched an independent calculation across nine weight and threshold settings. LibreOffice
+  wasn't installed, so that half of the last check is still open.
 
 ## Left out on purpose
 

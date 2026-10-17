@@ -574,6 +574,19 @@ class ReportTests(unittest.TestCase):
 
         self.assertEqual((report.students, report.weeks, report.data_range), ([], [], None))
 
+    def test_activity_after_the_report_date_is_warned_about(self):
+        # A progress time of 16:40 read as UTC is already 03:40 on the 18th in Melbourne.
+        student = records(
+            "late",
+            conversations=[conversation([["hello", "hi"]])],
+            progress={"1": {"topics": {"Topic A": {"progress": 1, "last_updated": utc(2026, 10, 17, 16, 40)}}}},
+        )
+
+        report = build_report([student, self.three_weeks("fine", 0)], REPORT_DATE)
+
+        self.assertEqual(len(report.warnings), 1)
+        self.assertIn("late: activity dated 2026-10-18, after the report date 2026-10-17", report.warnings[0])
+
     def test_the_report_is_the_same_each_time(self):
         students = [self.three_weeks("a", 6), self.three_weeks("b", 0)]
 

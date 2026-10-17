@@ -221,6 +221,9 @@ class Measure:
     weight: float
     read: Callable[[StudentMetrics], Any]
     is_rate: bool = False
+    # Rates only. These name the two counts a rate divides, for the workbook's column headings.
+    successes_label: str = ""
+    opportunities_label: str = ""
 
 
 # A student who never used a mode has no data for that mode's measures, which is different from
@@ -239,18 +242,22 @@ PRIZE_2_MEASURES: Tuple[Measure, ...] = (
     Measure(
         "improvement", "Improvement after feedback", 1,
         lambda s: (s.questions_improved, s.questions_first_below_2), is_rate=True,
+        successes_label="questions improved", opportunities_label="questions first scored below 2",
     ),
     Measure(
         "revisiting", "Revisiting", 1,
         lambda s: (s.items_revisited, s.items_worked), is_rate=True,
+        successes_label="questions and topics revisited", opportunities_label="questions and topics worked on",
     ),
     Measure(
         "follow_ups", "Follow-up questions", 1,
         lambda s: (s.follow_ups, s.tutor_messages), is_rate=True,
+        successes_label="follow-up questions", opportunities_label="tutor messages",
     ),
     Measure(
         "responded", "Responded to feedback", 0,
         lambda s: (s.questions_responded, s.questions_first_below_2), is_rate=True,
+        successes_label="questions retried", opportunities_label="questions first scored below 2",
     ),
     Measure("messages_per_topic", "Messages per topic conversation", 0, lambda s: s.messages_per_topic),
     Measure("interactions_per_session", "Interactions per session", 0, lambda s: s.interactions_per_session),
@@ -729,6 +736,13 @@ def build_report(
         if summary is not None:
             metrics.append(summary[0])
             attempts.extend(summary[1])
+
+    for student in metrics:
+        if student.last_active is not None and student.last_active > report_date:
+            warnings.append(
+                f"{student.user_id}: activity dated {student.last_active}, after the report date "
+                f"{report_date}. A progress record written by a machine in another time zone can do this."
+            )
 
     weeks: List[date] = []
     data_range: Optional[Tuple[date, date]] = None
