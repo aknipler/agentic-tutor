@@ -108,7 +108,10 @@ streamlit run admin.py    # vector stores, module links and users (needs OPENAI_
 streamlit run debug.py    # environment checks
 ```
 
-Every script in `scripts/` is a dry run by default and only writes with `--commit`.
+Every script in `scripts/` is a dry run by default and only writes with `--commit`. The one
+exception is `scripts/engagement_report.py`, which never writes to a database. It reads the logs
+and progress records and writes an Excel workbook to `data/reports/`. See
+`docs/engagement-report-plan.md` for what it reports and how to check it.
 
 ## Adapting to another subject
 
@@ -194,6 +197,10 @@ remove it from `next_steps.md`.
 | `utils/pages.py` | Shared body of every module page, and the assessor page lookup |
 | `utils/course_files.py` | Rules for matching source files to module numbers |
 | `utils/status.py` | How the 0/1/2 scale is shown on screen, shared by every page |
+| `utils/engagement.py` | Student engagement metrics and prize scores, as pure functions (see `docs/engagement-report-plan.md`) |
+| `utils/engagement_checks.py` | Validation checks that compare the engagement report with the admin counts and progress records |
+| `utils/engagement_workbook.py` | Writes the engagement report as an Excel workbook, with formulas for each prize's score and rank |
+| `tests/` | Unit tests that need no database. Run `.venv/Scripts/python.exe -m unittest discover -s tests -t .` |
 | `assessor/` | Answer submission, grading, results UI |
 | `mongodb/connectors/` | All database access |
 | `mongodb/logger.py` | Conversation and submission logs (separate database) |

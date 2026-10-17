@@ -91,6 +91,12 @@ One document per student, created on first login.
 `user_submissions` holds assessor submissions. The tutor reads `user_conversations` back on
 login to restore chat history, so the app depends on this database at runtime.
 
+A conversation is a list of `[student_message, tutor_message, logged_at]` pairs, with
+`logged_at` in UTC. A tutor-generated opening question has an empty student message. Pairs
+written before timestamps were added have only two elements and are undated. Readers must
+accept both shapes. `docs/engagement-report-plan.md` and `utils/engagement.py` use the
+timestamps to report on usage.
+
 ## Course material
 
 The app doesn't read `knowledge/` at runtime. The one exception is `assessor/ui.py`, which
