@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from pymongo import MongoClient
 from pymongo.collection import Collection
 import streamlit as st
@@ -34,8 +34,14 @@ class UserLogger:
             user_id (str): Unique identifier for the user
             module (str): Name of the module
             topic (str): Topic of the conversation
-            messages (List[List[str]]): A list of message pairs [user_message, assistant_message]
+            messages (List[List[str]]): A list of message pairs [user_message, assistant_message].
+                Each pair is stored as [user_message, assistant_message, logged_at], with
+                logged_at the time of this call in UTC. Pairs logged before this was added
+                have two elements and are undated. Readers must tolerate both shapes.
         """
+        logged_at = datetime.now(timezone.utc)
+        messages = [[pair[0], pair[1], logged_at] for pair in messages]
+
         # Find the existing conversation for this module/topic pair
         user_doc = self.conversations.find_one({"user_id": user_id})
         if user_doc:
@@ -116,7 +122,7 @@ class UserLogger:
             upsert=True
         )
     
-    def get_conversation(self, user_id: str, module: str, topic: str) -> List[List[str]]:
+    def get_conversation(self, user_id: str, module: str, topic: str) -> List[List[Any]]:
         """Retrieve one conversation's message pairs for a module/topic pair.
 
         Projected server-side rather than pulling every conversation the student
@@ -129,7 +135,8 @@ class UserLogger:
             topic (str): Canonical topic name
 
         Returns:
-            List[List[str]]: [user_message, assistant_message] pairs, oldest first.
+            List[List[Any]]: [user_message, assistant_message] pairs, oldest first, with a
+            third logged_at element (UTC) on pairs written since timestamps were added.
             Empty if this module/topic pair has no logged conversation.
         """
         doc = self.conversations.find_one(

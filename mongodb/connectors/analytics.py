@@ -27,11 +27,12 @@ CACHE_TTL_SECONDS = 300
 def get_tutor_message_counts() -> Dict[str, int]:
     """Count each student's own messages to the tutor, keyed by user_id.
 
-    A logged conversation is a list of `[student_message, tutor_message]` pairs,
-    and a tutor-generated opening question is written with an empty student
-    message (mongodb/logger.py). Counting only non-empty first elements
-    therefore counts the times a student actually said something, not the times
-    the tutor spoke to them.
+    A logged conversation is a list of `[student_message, tutor_message]` pairs
+    (newer ones carry a third `logged_at` element, which is ignored here), and a
+    tutor-generated opening question is written with an empty student message
+    (mongodb/logger.py). Counting only non-empty first elements therefore counts
+    the times a student actually said something, not the times the tutor spoke
+    to them.
 
     Returns:
         dict: {user_id: number of messages}. Users who never wrote anything are

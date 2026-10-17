@@ -194,6 +194,8 @@ remove it from `next_steps.md`.
 | `utils/pages.py` | Shared body of every module page, and the assessor page lookup |
 | `utils/course_files.py` | Rules for matching source files to module numbers |
 | `utils/status.py` | How the 0/1/2 scale is shown on screen, shared by every page |
+| `utils/engagement.py` | Student engagement metrics and prize scores, as pure functions (see `docs/engagement-report-plan.md`) |
+| `tests/` | Unit tests that need no database. Run `.venv/Scripts/python.exe -m unittest discover -s tests -t .` |
 | `assessor/` | Answer submission, grading, results UI |
 | `mongodb/connectors/` | All database access |
 | `mongodb/logger.py` | Conversation and submission logs (separate database) |
